@@ -1,5 +1,5 @@
 service: createimage
-frameworkVersion: '3'
+frameworkVersion: '4'
 
 provider:
   name: aws
@@ -15,7 +15,7 @@ provider:
           Action:
             - 's3:*'
           Resource:
-            - 'arn:aws:s3:::${self:custom.thumbnailBucket}/*'
+            - 'arn:aws:s3:::familienkalender/*'
             - !Join ['', ['arn:aws:s3:::', !Ref ServerlessDeploymentBucket, '/*']]
 
 package:
