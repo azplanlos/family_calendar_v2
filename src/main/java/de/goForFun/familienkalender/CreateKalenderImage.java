@@ -31,8 +31,6 @@ public class CreateKalenderImage implements RequestHandler<ScheduledEvent, Void>
     public Void handleRequest(ScheduledEvent input, Context context) {
         LambdaLogger logger = context.getLogger();
         logger.log("EVENT TYPE: " + input.getClass());
-
-
         return null;
     }
 
