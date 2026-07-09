@@ -1,0 +1,214 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "The AWS CloudFormation template for this Serverless application",
+  "Resources": {
+    "FamilyWallDashKalenderLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/createimage-dev-FamilyWall-Kalender",
+        "RetentionInDays": 7
+      }
+    },
+    "IamRoleLambdaExecution": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "lambda.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": {
+              "Fn::Join": [
+                "-",
+                [
+                  "createimage",
+                  "dev",
+                  "lambda"
+                ]
+              ]
+            },
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:CreateLogStream",
+                    "logs:CreateLogGroup",
+                    "logs:TagResource"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/createimage-dev*:*"
+                    }
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:PutLogEvents"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/createimage-dev*:*:*"
+                    }
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:*"
+                  ],
+                  "Resource": "arn:aws:s3:::familienkalender/*"
+                }
+              ]
+            }
+          }
+        ],
+        "Path": "/",
+        "RoleName": {
+          "Fn::Join": [
+            "-",
+            [
+              "createimage",
+              "dev",
+              {
+                "Ref": "AWS::Region"
+              },
+              "lambdaRole"
+            ]
+          ]
+        }
+      }
+    },
+    "FamilyWallDashKalenderLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": "serverless-framework-deployments-eu-central-1-4403eeab-6003",
+          "S3Key": "serverless/createimage/dev/1767535319783-2026-01-04T14:01:59.783Z/Familienkalender-Server-1.0-SNAPSHOT-shaded.jar"
+        },
+        "Handler": "de.goForFun.familienkalender.CreateKalenderImage",
+        "Runtime": "java25",
+        "FunctionName": "createimage-dev-FamilyWall-Kalender",
+        "MemorySize": 1024,
+        "Timeout": 10,
+        "Environment": {
+          "Variables": {
+            "THUMBNAIL_SIZE": "100",
+            "FONTCONFIG_CACHE": "/tmp/.cache/fontconfig",
+            "FONTCONFIG_PATH": "/tmp/fontconfig"
+          }
+        },
+        "Role": {
+          "Fn::GetAtt": [
+            "IamRoleLambdaExecution",
+            "Arn"
+          ]
+        }
+      },
+      "DependsOn": [
+        "FamilyWallDashKalenderLogGroup"
+      ]
+    },
+    "FamilyWallDashKalenderLambdaVersion2EKXAuD30NwnkypqlATEEAUXjA5ZS1925rdEcpNw4k": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "FamilyWallDashKalenderLambdaFunction"
+        },
+        "CodeSha256": "tf5gFPUAWHk4uOqasoZfyHUPUvNe/u24FwdEnJRkqF0="
+      }
+    },
+    "CreateimagedevFamilyWallKalenderrule1EventBridgeRule": {
+      "Type": "AWS::Events::Rule",
+      "Properties": {
+        "Name": "createimage-dev-FamilyWall-Kalender-rule-1",
+        "ScheduleExpression": "rate(6 hours)",
+        "State": "ENABLED",
+        "Targets": [
+          {
+            "Arn": {
+              "Fn::GetAtt": [
+                "FamilyWallDashKalenderLambdaFunction",
+                "Arn"
+              ]
+            },
+            "Id": "createimage-dev-FamilyWall-Kalender-rule-1-target"
+          }
+        ]
+      }
+    },
+    "FamilyWallDashKalenderEventBridgeLambdaPermission1": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "FamilyWallDashKalenderLambdaFunction",
+            "Arn"
+          ]
+        },
+        "Principal": "events.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            ":",
+            [
+              "arn",
+              {
+                "Ref": "AWS::Partition"
+              },
+              "events",
+              {
+                "Ref": "AWS::Region"
+              },
+              {
+                "Ref": "AWS::AccountId"
+              },
+              {
+                "Fn::Join": [
+                  "/",
+                  [
+                    "rule",
+                    "createimage-dev-FamilyWall-Kalender-rule-1"
+                  ]
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "ServerlessDeploymentBucketName": {
+      "Value": "serverless-framework-deployments-eu-central-1-4403eeab-6003",
+      "Export": {
+        "Name": "sls-createimage-dev-ServerlessDeploymentBucketName"
+      }
+    },
+    "FamilyWallDashKalenderLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "FamilyWallDashKalenderLambdaVersion2EKXAuD30NwnkypqlATEEAUXjA5ZS1925rdEcpNw4k"
+      },
+      "Export": {
+        "Name": "sls-createimage-dev-FamilyWallDashKalenderLambdaFunctionQualifiedArn"
+      }
+    }
+  }
+}
