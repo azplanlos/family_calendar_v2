@@ -7,15 +7,17 @@ import java.awt.image.BufferedImage;
  * für das e-ink Display:
  * <ul>
  *   <li>Black-Plane: 1 Bit pro Pixel, Bit=0 wenn Pixel schwarz oder rot, Bit=1 wenn weiß</li>
- *   <li>Red-Plane: 1 Bit pro Pixel, Bit=1 wenn Pixel rot, Bit=0 sonst</li>
+ *   <li>Red-Plane: 1 Bit pro Pixel, Bit=0 wenn Pixel rot, Bit=1 sonst (GxEPD2 invertiert intern)</li>
  * </ul>
  * <p>
  * Ausgabeformat: [48000 Bytes Black-Plane][48000 Bytes Red-Plane] = 96000 Bytes total.
  * Jedes Byte enthält 8 Pixel, MSB zuerst (links → rechts), Zeilen von oben nach unten.
+ * Das Bild wird um 180° gedreht exportiert (Bottom-to-Top, Right-to-Left Scan),
+ * da GxEPD2 writeImage direkt in den Panel-RAM schreibt ohne Rotation.
  * <p>
  * Für das Waveshare 7.5" B/W/R Panel mit GxEPD2 writeImage gilt:
  * Black-Plane (Command 0x10): Bit=0 → schwarzes Pixel, Bit=1 → weiß
- * Red-Plane (Command 0x13): Bit=1 → rotes Pixel (wird intern nochmals invertiert)
+ * Red-Plane (Command 0x13): Eingabe wird mit ~data invertiert, also Bit=0 in Eingabe → rot
  */
 public class BitplaneExporter {
 
@@ -32,8 +34,11 @@ public class BitplaneExporter {
      * Konvertiert das gerenderte BufferedImage in das Raw-Bitplane-Format.
      * <p>
      * Für das GxEPD2 Waveshare 7.5" B/W/R Panel (Command 0x10/0x13):
-     * Black-Plane: Bit=0 → schwarzes Pixel, Bit=1 → weiß (invertierte Logik!)
-     * Red-Plane: Bit=1 → rotes Pixel, Bit=0 → kein Rot
+     * Black-Plane: Bit=0 → schwarzes Pixel, Bit=1 → weiß
+     * Red-Plane: Bit=0 → rotes Pixel, Bit=1 → kein Rot (GxEPD2 invertiert intern mit ~data)
+     * <p>
+     * Das Bild wird um 180° gedreht exportiert, da writeImage direkt in den Panel-RAM
+     * schreibt und die GxEPD2-Rotation (setRotation) dabei nicht wirkt.
      *
      * @param image 800x480 BufferedImage mit IndexColorModel (2 Bit, 3 Farben)
      * @return byte[96000]: erste 48000 Bytes = Black-Plane, nächste 48000 = Red-Plane
@@ -49,30 +54,33 @@ public class BitplaneExporter {
         byte[] blackPlane = new byte[PLANE_SIZE];
         byte[] redPlane = new byte[PLANE_SIZE];
 
-        // Initialize black plane to 0xFF (all white) - GxEPD2 convention: 1=white, 0=black
+        // Initialize both planes to 0xFF:
+        // Black plane: 1=white (default)
+        // Red plane: 1=no red (default, GxEPD2 inverts with ~data before sending)
         for (int i = 0; i < PLANE_SIZE; i++) {
             blackPlane[i] = (byte) 0xFF;
+            redPlane[i] = (byte) 0xFF;
         }
 
         int byteIndex = 0;
         int bitIndex = 7; // MSB first
 
-        for (int y = 0; y < HEIGHT; y++) {
-            for (int x = 0; x < WIDTH; x++) {
-                // getRGB() liefert bei IndexColorModel den gemappten RGB-Wert,
-                // wir brauchen aber den Pixel-Index direkt aus dem Raster
+        // Scan in 180°-rotated order (bottom-to-top, right-to-left)
+        // so the image appears correctly on the physically mounted display
+        for (int y = HEIGHT - 1; y >= 0; y--) {
+            for (int x = WIDTH - 1; x >= 0; x--) {
                 int pixelIndex = image.getRaster().getSample(x, y, 0);
 
                 if (pixelIndex == INDEX_BLACK) {
                     // Black: clear bit in black plane (0 = black pixel)
                     blackPlane[byteIndex] &= (byte) ~(1 << bitIndex);
                 } else if (pixelIndex == INDEX_RED) {
-                    // Red: set bit in red plane (1 = red pixel)
-                    redPlane[byteIndex] |= (byte) (1 << bitIndex);
-                    // Also clear bit in black plane for red pixels (0 = not white)
+                    // Red: clear bit in red plane (0 = red pixel, GxEPD2 inverts to 1)
+                    redPlane[byteIndex] &= (byte) ~(1 << bitIndex);
+                    // Also clear bit in black plane for red pixels
                     blackPlane[byteIndex] &= (byte) ~(1 << bitIndex);
                 }
-                // INDEX_TRANSPARENT (0) → black plane stays 1 (white), red plane stays 0
+                // INDEX_TRANSPARENT (0) → both planes stay 0xFF (white, no red)
 
                 bitIndex--;
                 if (bitIndex < 0) {

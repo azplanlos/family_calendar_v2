@@ -110,7 +110,7 @@ void setup() {
 
     // Initialize display
     display.init(115200, true, 2, false);
-    display.setRotation(0); // No rotation needed; image is pre-rendered in correct orientation
+    display.setRotation(2); // 180° for GFX drawing operations (battery indicator etc.)
 
     // Connect to WiFi and fetch image, then overlay battery indicator
     if (connectWiFi()) {
