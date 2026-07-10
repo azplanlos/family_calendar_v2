@@ -74,6 +74,14 @@ public class ImageRenderer {
      * Erstellt das Kalenderbild und schreibt es als PNG in den OutputStream.
      */
     public void renderImage(OutputStream outputStream, RenderData data) throws IOException {
+        BufferedImage image = createImage(data);
+        ImageIO.write(image, "png", outputStream);
+    }
+
+    /**
+     * Erstellt das Kalenderbild als BufferedImage (für PNG-Export und Bitplane-Export).
+     */
+    public BufferedImage createImage(RenderData data) {
         BufferedImage image = new BufferedImage(IMAGE_WIDTH, IMAGE_HEIGHT, BufferedImage.TYPE_BYTE_BINARY,
                 new IndexColorModel(2, 3, new byte[]{(byte) 255, 0, (byte) 255}, new byte[]{(byte) 255, 0, 0}, new byte[]{(byte) 255, 0, 0}, 0));
         Graphics2D graphics = image.createGraphics();
@@ -88,7 +96,7 @@ public class ImageRenderer {
         drawFooter(data.now(), graphics);
 
         graphics.dispose();
-        ImageIO.write(image, "png", outputStream);
+        return image;
     }
 
     // ========== HEADER ==========

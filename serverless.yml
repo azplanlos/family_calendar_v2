@@ -34,3 +34,14 @@ functions:
       FONTCONFIG_CACHE: /tmp/.cache/fontconfig
       FONTCONFIG_PATH: /tmp/fontconfig
       CALENDAR_FEED: ${param:calendarFeed}
+
+  ServeCalendarImage:
+    handler: de.goForFun.familienkalender.ServeCalendarImage
+    timeout: 10
+    memorySize: 256
+    url:
+      authorizer: none
+    environment:
+      FONTCONFIG_CACHE: /tmp/.cache/fontconfig
+      FONTCONFIG_PATH: /tmp/fontconfig
+      API_SECRET: ${param:apiSecret}
