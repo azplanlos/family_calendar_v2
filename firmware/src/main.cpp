@@ -20,6 +20,7 @@
 #include <Adafruit_GFX.h>
 
 #include "config.h"
+#include "nvs_config.h"
 #include "ota_update.h"
 
 // ============================================================
@@ -61,6 +62,30 @@ void setup() {
     Serial.begin(115200);
     delay(1000);
     Serial.println("\n[FamilyCalendar] Starting...");
+    Serial.printf("[FamilyCalendar] Firmware %s\n", FW_VERSION_STRING);
+
+    // Load configuration from NVS
+    if (!configInit()) {
+        Serial.println("[Config] Keine Konfiguration gefunden.");
+        Serial.println("[Config] Starte Setup-Wizard...");
+        Serial.println("[Config] (Sende beliebiges Zeichen um zu starten)");
+
+        // Wait for serial connection (user opens terminal)
+        unsigned long waitStart = millis();
+        while (!Serial.available() && (millis() - waitStart) < 30000) {
+            delay(100);
+        }
+
+        configRunSetupWizard();
+
+        Serial.println("[Config] Neustart...");
+        delay(500);
+        ESP.restart();
+        return;
+    }
+
+    const DeviceConfig& cfg = configGet();
+    Serial.printf("[Config] WiFi SSID: %s\n", cfg.wifiSsid);
 
     // Read battery level
     float batteryVoltage = readBatteryVoltage();
@@ -127,9 +152,10 @@ void loop() {
 // WiFi Connection
 // ============================================================
 bool connectWiFi() {
-    Serial.printf("[WiFi] Connecting to %s", WIFI_SSID);
+    const DeviceConfig& cfg = configGet();
+    Serial.printf("[WiFi] Connecting to %s", cfg.wifiSsid);
     WiFi.mode(WIFI_STA);
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    WiFi.begin(cfg.wifiSsid, cfg.wifiPassword);
 
     int attempts = 0;
     while (WiFi.status() != WL_CONNECTED && attempts < 40) {
@@ -151,6 +177,7 @@ bool connectWiFi() {
 // Fetch Image from Lambda Function URL
 // ============================================================
 bool fetchImage() {
+    const DeviceConfig& cfg = configGet();
     HTTPClient http;
     WiFiClientSecure secureClient;
 
@@ -159,9 +186,9 @@ bool fetchImage() {
     secureClient.setInsecure();
 
     Serial.println("[HTTP] Fetching calendar.bin from Lambda Function URL...");
-    http.begin(secureClient, CALENDAR_FUNCTION_URL);
+    http.begin(secureClient, cfg.calendarUrl);
     http.setTimeout(30000);
-    http.addHeader("Authorization", String("Bearer ") + API_SECRET);
+    http.addHeader("Authorization", String("Bearer ") + cfg.apiSecret);
 
     int httpCode = http.GET();
 

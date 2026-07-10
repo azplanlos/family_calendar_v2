@@ -14,6 +14,7 @@
 #include <HTTPClient.h>
 #include <Update.h>
 #include "config.h"
+#include "nvs_config.h"
 #include "ota_update.h"
 
 // ============================================================
@@ -144,6 +145,8 @@ bool checkAndPerformOTA() {
     Serial.println("[OTA] Checking for firmware updates...");
     Serial.printf("[OTA] Current version: %s\n", FW_VERSION_STRING);
 
+    const DeviceConfig& cfg = configGet();
+
     WiFiClientSecure secureClient;
     secureClient.setInsecure(); // GitHub uses well-known CAs; skip verification for simplicity
 
@@ -151,14 +154,14 @@ bool checkAndPerformOTA() {
 
     // Step 1: Query latest release from GitHub API
     String apiUrl = String("https://api.github.com/repos/") +
-                    GITHUB_OWNER + "/" + GITHUB_REPO + "/releases/latest";
+                    cfg.githubOwner + "/" + cfg.githubRepo + "/releases/latest";
 
     Serial.printf("[OTA] Querying: %s\n", apiUrl.c_str());
     http.begin(secureClient, apiUrl);
     http.addHeader("Accept", "application/vnd.github+json");
     http.addHeader("User-Agent", "ESP32-OTA");
-    if (strlen(GITHUB_TOKEN) > 0) {
-        http.addHeader("Authorization", String("Bearer ") + GITHUB_TOKEN);
+    if (strlen(cfg.githubToken) > 0) {
+        http.addHeader("Authorization", String("Bearer ") + cfg.githubToken);
     }
 
     int httpCode = http.GET();
@@ -208,8 +211,8 @@ bool checkAndPerformOTA() {
     Serial.println("[OTA] Downloading firmware...");
     http.begin(secureClient, assetUrl);
     http.addHeader("User-Agent", "ESP32-OTA");
-    if (strlen(GITHUB_TOKEN) > 0) {
-        http.addHeader("Authorization", String("Bearer ") + GITHUB_TOKEN);
+    if (strlen(cfg.githubToken) > 0) {
+        http.addHeader("Authorization", String("Bearer ") + cfg.githubToken);
     }
     // GitHub redirects asset downloads, follow redirects
     http.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);

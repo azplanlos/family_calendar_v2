@@ -20,19 +20,10 @@
 #endif
 
 // ============================================================
-// WiFi Configuration
+// WiFi, API & GitHub OTA Configuration
 // ============================================================
-#define WIFI_SSID "YOUR_WIFI_SSID"
-#define WIFI_PASSWORD "YOUR_WIFI_PASSWORD"
-
-// ============================================================
-// Backend API Configuration
-// ============================================================
-// Lambda Function URL for serving calendar.bin
-#define CALENDAR_FUNCTION_URL "https://YOUR_FUNCTION_ID.lambda-url.eu-central-1.on.aws/"
-
-// Shared secret for Bearer token authentication
-#define API_SECRET "YOUR_SHARED_SECRET"
+// These values are stored in NVS (flash) and configured via
+// the serial setup wizard on first boot. See nvs_config.h.
 
 // ============================================================
 // E-Paper Display Pin Definitions (LOLIN S3 Pro Display Port)
@@ -79,13 +70,11 @@
 #define UPDATE_INTERVAL_MIN 360
 
 // ============================================================
-// OTA Update Configuration (GitHub Releases)
+// OTA Update Configuration
 // ============================================================
-#define GITHUB_OWNER "azplanlos"
-#define GITHUB_REPO "family_calendar_v2"
+// GitHub owner/repo/token are stored in NVS (see nvs_config.h).
+// Only the asset filename is fixed at compile time.
 #define GITHUB_FIRMWARE_ASSET "firmware.bin"
-// Optional: GitHub Personal Access Token for private repos (leave empty for public)
-#define GITHUB_TOKEN ""
 
 // ============================================================
 // Deep Sleep
