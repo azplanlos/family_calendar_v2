@@ -33,4 +33,4 @@ functions:
       THUMBNAIL_SIZE: 100
       FONTCONFIG_CACHE: /tmp/.cache/fontconfig
       FONTCONFIG_PATH: /tmp/fontconfig
-      CALENDAR_FEED: ${env:CALENDAR_FEED}
+      CALENDAR_FEED: ${param:calendarFeed}
