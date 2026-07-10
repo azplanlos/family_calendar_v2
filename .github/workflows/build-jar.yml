@@ -1,0 +1,39 @@
+name: Build JAR
+
+on:
+  workflow_call:
+    outputs:
+      jar-path:
+        description: Path to the built JAR file
+        value: ${{ jobs.build.outputs.jar-path }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      jar-path: ${{ steps.find-jar.outputs.path }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: maven
+
+      - name: Build with Maven
+        run: mvn package -DskipTests
+
+      - name: Find JAR
+        id: find-jar
+        run: |
+          JAR_PATH=$(find target -name '*.jar' -not -name 'original-*' | head -1)
+          echo "path=$JAR_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Upload JAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-jar
+          path: ${{ steps.find-jar.outputs.path }}
+          retention-days: 1

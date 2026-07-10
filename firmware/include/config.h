@@ -2,6 +2,24 @@
 #define CONFIG_H
 
 // ============================================================
+// Firmware Version (Semantic Versioning)
+// Overridden by CI build flags when built via GitHub Actions.
+// These defaults are used for local development builds only.
+// ============================================================
+#ifndef FW_VERSION_MAJOR
+#define FW_VERSION_MAJOR 0
+#endif
+#ifndef FW_VERSION_MINOR
+#define FW_VERSION_MINOR 0
+#endif
+#ifndef FW_VERSION_PATCH
+#define FW_VERSION_PATCH 0
+#endif
+#ifndef FW_VERSION_STRING
+#define FW_VERSION_STRING "0.0.0"
+#endif
+
+// ============================================================
 // WiFi Configuration
 // ============================================================
 #define WIFI_SSID "YOUR_WIFI_SSID"
@@ -59,6 +77,15 @@
 // Update Interval (in minutes)
 // ============================================================
 #define UPDATE_INTERVAL_MIN 360
+
+// ============================================================
+// OTA Update Configuration (GitHub Releases)
+// ============================================================
+#define GITHUB_OWNER "azplanlos"
+#define GITHUB_REPO "family_calendar_v2"
+#define GITHUB_FIRMWARE_ASSET "firmware.bin"
+// Optional: GitHub Personal Access Token for private repos (leave empty for public)
+#define GITHUB_TOKEN ""
 
 // ============================================================
 // Deep Sleep

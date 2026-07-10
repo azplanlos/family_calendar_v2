@@ -1,0 +1,55 @@
+name: Build Firmware
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Firmware version (e.g. 1.2.0). Defaults to 0.0.0 for non-release builds.'
+        required: false
+        type: string
+        default: '0.0.0'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parse version components
+        id: version
+        run: |
+          VERSION="${{ inputs.version }}"
+          # Strip leading 'v' if present
+          VERSION="${VERSION#v}"
+          MAJOR=$(echo "$VERSION" | cut -d. -f1)
+          MINOR=$(echo "$VERSION" | cut -d. -f2)
+          PATCH=$(echo "$VERSION" | cut -d. -f3)
+          echo "major=${MAJOR:-0}" >> "$GITHUB_OUTPUT"
+          echo "minor=${MINOR:-0}" >> "$GITHUB_OUTPUT"
+          echo "patch=${PATCH:-0}" >> "$GITHUB_OUTPUT"
+          echo "string=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Build firmware
+        run: pio run -d firmware
+        env:
+          PLATFORMIO_BUILD_FLAGS: >-
+            -DFW_VERSION_FROM_CI
+            -DFW_VERSION_STRING=\"${{ steps.version.outputs.string }}\"
+            -DFW_VERSION_MAJOR=${{ steps.version.outputs.major }}
+            -DFW_VERSION_MINOR=${{ steps.version.outputs.minor }}
+            -DFW_VERSION_PATCH=${{ steps.version.outputs.patch }}
+
+      - name: Upload firmware artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-bin
+          path: firmware/.pio/build/lolin_s3_pro/firmware.bin
+          retention-days: 1

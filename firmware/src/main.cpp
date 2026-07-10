@@ -20,6 +20,7 @@
 #include <Adafruit_GFX.h>
 
 #include "config.h"
+#include "ota_update.h"
 
 // ============================================================
 // Display Instance
@@ -86,6 +87,9 @@ void setup() {
 
     // Connect to WiFi and fetch image, then overlay battery indicator
     if (connectWiFi()) {
+        // Check for OTA update before fetching calendar image
+        checkAndPerformOTA(); // If update found, device reboots and never returns
+
         if (fetchImage()) {
             showImage(batteryPercent);
             Serial.println("[OK] Display updated successfully.");
