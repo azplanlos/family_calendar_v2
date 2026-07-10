@@ -51,6 +51,8 @@ bool connectWiFi();
 bool fetchImage();
 void showImage(int batteryPercent);
 void drawBatteryIndicator(int batteryPercent);
+void showErrorImage();
+void handleConnectionError();
 void enterDeepSleep();
 float readBatteryVoltage();
 int readBatteryPercent();
@@ -118,12 +120,15 @@ void setup() {
         if (fetchImage()) {
             showImage(batteryPercent);
             Serial.println("[OK] Display updated successfully.");
+            WiFi.disconnect(true);
         } else {
             Serial.println("[ERROR] Failed to fetch image from backend.");
+            WiFi.disconnect(true);
+            handleConnectionError(); // never returns (deep sleep or restart)
         }
-        WiFi.disconnect(true);
     } else {
         Serial.println("[ERROR] WiFi connection failed.");
+        handleConnectionError(); // never returns (deep sleep or restart)
     }
 
     // Enter deep sleep
@@ -297,6 +302,135 @@ void drawBatteryIndicator(int batteryPercent) {
     display.setFont(nullptr); // built-in 6x8 font (no anti-aliasing)
     display.setCursor(batX + batW + nippleW + 4, batY + 1);
     display.print(String(batteryPercent) + "%");
+}
+
+// ============================================================
+// Error Image ("Keine Verbindung" + Network Icon)
+// Drawn directly on e-ink using only black/white/red (no grays)
+// ============================================================
+void showErrorImage() {
+    Serial.println("[Display] Showing error image...");
+
+    display.setFullWindow();
+    display.firstPage();
+    do {
+        display.fillScreen(GxEPD_WHITE);
+
+        // --- Network icon (centered, y=160) ---
+        // Simple WiFi-style icon: concentric arcs + base dot
+        // Drawn as pixel-perfect arcs (no anti-aliasing)
+        int cx = DISPLAY_WIDTH / 2;
+        int iconY = 160;
+
+        // Base dot (red, 6x6)
+        display.fillRect(cx - 3, iconY, 6, 6, GxEPD_RED);
+
+        // Arc 1 (innermost) - black
+        display.drawCircle(cx, iconY + 2, 14, GxEPD_BLACK);
+        display.drawCircle(cx, iconY + 2, 15, GxEPD_BLACK);
+        // Erase bottom half of arc
+        display.fillRect(cx - 20, iconY + 2, 40, 20, GxEPD_WHITE);
+
+        // Arc 2 (middle) - black
+        display.drawCircle(cx, iconY + 2, 26, GxEPD_BLACK);
+        display.drawCircle(cx, iconY + 2, 27, GxEPD_BLACK);
+        // Erase bottom half
+        display.fillRect(cx - 32, iconY + 2, 64, 32, GxEPD_WHITE);
+
+        // Arc 3 (outermost) - black
+        display.drawCircle(cx, iconY + 2, 38, GxEPD_BLACK);
+        display.drawCircle(cx, iconY + 2, 39, GxEPD_BLACK);
+        // Erase bottom half
+        display.fillRect(cx - 44, iconY + 2, 88, 44, GxEPD_WHITE);
+
+        // Redraw base dot on top (may have been clipped)
+        display.fillRect(cx - 3, iconY, 6, 6, GxEPD_RED);
+
+        // Red "X" over the icon (diagonal cross, strike-through)
+        for (int i = -1; i <= 1; i++) {
+            display.drawLine(cx - 30 + i, iconY - 40, cx + 30 + i, iconY + 8, GxEPD_RED);
+            display.drawLine(cx + 30 + i, iconY - 40, cx - 30 + i, iconY + 8, GxEPD_RED);
+        }
+
+        // --- "Keine Verbindung" text (centered, below icon) ---
+        // Use built-in 6x8 font, scaled 3x for readability
+        display.setFont(nullptr);
+        display.setTextColor(GxEPD_BLACK);
+        display.setTextSize(3);
+
+        const char* line1 = "Keine";
+        const char* line2 = "Verbindung";
+
+        // Center text (6 pixels per char at scale 3 = 18px per char)
+        int16_t x1 = cx - (strlen(line1) * 18) / 2;
+        int16_t x2 = cx - (strlen(line2) * 18) / 2;
+        int16_t textY = iconY + 30;
+
+        display.setCursor(x1, textY);
+        display.print(line1);
+        display.setCursor(x2, textY + 30);
+        display.print(line2);
+
+        // Reset text size
+        display.setTextSize(1);
+
+    } while (display.nextPage());
+
+    display.hibernate();
+    Serial.println("[Display] Error image displayed.");
+}
+
+// ============================================================
+// Connection Error Handler
+// Prompts user via serial to reset config (10s timeout).
+// If no response, shows error image and enters deep sleep.
+// ============================================================
+void handleConnectionError() {
+    Serial.println();
+    Serial.println("========================================");
+    Serial.println("[ERROR] Verbindung fehlgeschlagen!");
+    Serial.println("[ERROR] Konfiguration zuruecksetzen? (j/n)");
+    Serial.println("[ERROR] Timeout in 10 Sekunden...");
+    Serial.println("========================================");
+
+    // Flush any pending serial input
+    while (Serial.available()) {
+        Serial.read();
+    }
+
+    // Wait for user input with 10s timeout
+    unsigned long waitStart = millis();
+    bool resetRequested = false;
+
+    while ((millis() - waitStart) < 10000) {
+        if (Serial.available()) {
+            char c = (char)Serial.read();
+            if (c == 'j' || c == 'J' || c == 'y' || c == 'Y') {
+                resetRequested = true;
+                break;
+            } else if (c == 'n' || c == 'N') {
+                break;
+            }
+        }
+        delay(50);
+    }
+
+    if (resetRequested) {
+        Serial.println("[Config] Konfiguration wird geloescht...");
+        configClear();
+        Serial.println("[Config] Neustart fuer Setup-Wizard...");
+        delay(500);
+        ESP.restart();
+        return;
+    }
+
+    Serial.println("[ERROR] Kein Reset. Zeige Fehlerbild...");
+
+    // Show error image on e-ink display
+    showErrorImage();
+
+    // Enter deep sleep
+    enterDeepSleep();
 }
 
 // ============================================================
