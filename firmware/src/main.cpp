@@ -254,7 +254,7 @@ void showImage(int batteryPercent) {
     Serial.println("[Display] Writing image to e-paper...");
 
     // First write the backend image
-    display.writeNative(blackBuffer, redBuffer, 0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT);
+    display.writeNative(blackBuffer, redBuffer, 0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, false, false, false);
 
     // Overlay battery indicator in top-left corner
     drawBatteryIndicator(batteryPercent);
