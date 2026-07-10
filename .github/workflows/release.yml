@@ -7,11 +7,49 @@ on:
 jobs:
   build-jar:
     uses: ./.github/workflows/build-jar.yml
+    with:
+      version: ${{ github.event.release.tag_name }}
 
   build-firmware:
     uses: ./.github/workflows/build-firmware.yml
     with:
       version: ${{ github.event.release.tag_name }}
+
+  deploy:
+    needs: build-jar
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set version in POM
+        run: |
+          VERSION="${{ github.event.release.tag_name }}"
+          VERSION="${VERSION#v}"
+          mvn versions:set -DnewVersion=$VERSION -DgenerateBackupPoms=false
+
+      - name: Download JAR
+        uses: actions/download-artifact@v4
+        with:
+          name: server-jar
+          path: target
+
+      - name: Rename JAR to match serverless.yml
+        run: |
+          JAR=$(find target -name '*.jar' | head -1)
+          mv "$JAR" target/Familienkalender-Server.jar
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install Serverless Framework
+        run: npm install -g serverless
+
+      - name: Deploy
+        run: serverless deploy --stage prod
+        env:
+          SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
 
   upload-assets:
     needs: [build-jar, build-firmware]

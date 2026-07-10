@@ -21,7 +21,7 @@ provider:
             - 'arn:aws:s3:::familienkalender/*'
 
 package:
-  artifact: target/Familienkalender-Server-1.0-SNAPSHOT.jar
+  artifact: target/Familienkalender-Server.jar
 
 functions:
   FamilyWall-Kalender:
@@ -37,8 +37,8 @@ functions:
 
   ServeCalendarImage:
     handler: de.goForFun.familienkalender.ServeCalendarImage
-    timeout: 10
-    memorySize: 256
+    timeout: 30
+    memorySize: 512
     url:
       authorizer: none
     environment:

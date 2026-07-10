@@ -336,6 +336,10 @@ public class ImageRenderer {
     // ========== FOOTER ==========
 
     private void drawFooter(LocalDateTime dt, Graphics2D graphics) {
+        // Version (bottom left)
+        FontHelper.drawString(graphics, "v" + VersionInfo.getVersion(), Aligment.LEFT, terminalFont.get(), 10, COLOR_BLACK, 10, IMAGE_HEIGHT - 12, 200, 10);
+
+        // Last update (bottom right)
         FontHelper.drawString(graphics, String.format("letzte Aktualisierung: %s", DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).format(dt)), Aligment.RIGHT, terminalFont.get(), 10, COLOR_BLACK, 0, IMAGE_HEIGHT - 12, RIGHT_EDGE, 10);
     }
 }
