@@ -17,10 +17,10 @@ public class TestIcalMapping {
     @Test
     public void testParseIcalMapsAllFields() throws ParserException, IOException {
         InputStream is = getClass().getResourceAsStream("/Familien-Pinnwand.ics");
-        CreateKalenderImage createKalenderImage = new CreateKalenderImage();
 
-        // 2026-01-24 (Saturday) has "Feier Innenstadt" (COLOR:#D50000) and recurring "Schwimmkurs" (COLOR:#7986CB)
-        List<Event> events = createKalenderImage.parseCalender(is, LocalDate.of(2026, 1, 24));
+        // Januar 2026 laden, dann 24.01. abfragen
+        CalendarParser parser = new CalendarParser(is, LocalDate.of(2026, 1, 24));
+        List<Event> events = parser.getEventsForDay(LocalDate.of(2026, 1, 24));
 
         assertThat(events).hasSize(2);
 
@@ -47,10 +47,10 @@ public class TestIcalMapping {
     @Test
     public void testParseIcalEventWithoutColor() throws ParserException, IOException {
         InputStream is = getClass().getResourceAsStream("/Familien-Pinnwand.ics");
-        CreateKalenderImage createKalenderImage = new CreateKalenderImage();
 
-        // 2026-02-08 (Sunday) has "Wellness" without COLOR and "Kinderkurs" with COLOR:#F4511E
-        List<Event> events = createKalenderImage.parseCalender(is, LocalDate.of(2026, 2, 8));
+        // Februar 2026 laden, dann 08.02. abfragen
+        CalendarParser parser = new CalendarParser(is, LocalDate.of(2026, 2, 8));
+        List<Event> events = parser.getEventsForDay(LocalDate.of(2026, 2, 8));
 
         assertThat(events).hasSizeGreaterThanOrEqualTo(1);
 
@@ -68,10 +68,10 @@ public class TestIcalMapping {
     @Test
     public void testParseIcalDateOnlyEvent() throws ParserException, IOException {
         InputStream is = getClass().getResourceAsStream("/Familien-Pinnwand.ics");
-        CreateKalenderImage createKalenderImage = new CreateKalenderImage();
 
-        // 2026-01-15 has a recurring date-only event "Linsen wechseln" (every 4 weeks on Thursday, starting 2025-12-18)
-        List<Event> events = createKalenderImage.parseCalender(is, LocalDate.of(2026, 1, 15));
+        // Januar 2026 laden, dann 15.01. abfragen
+        CalendarParser parser = new CalendarParser(is, LocalDate.of(2026, 1, 15));
+        List<Event> events = parser.getEventsForDay(LocalDate.of(2026, 1, 15));
 
         assertThat(events).hasSize(1);
 

@@ -39,3 +39,5 @@ build/
 .DS_Store
 /test.png
 target
+demo_alt.png
+.env
