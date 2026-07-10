@@ -20,12 +20,16 @@ public class TestImageCreation {
         List<Event> todayEvents = List.of(
                 new Event(List.of("Anna Schmidt"), now.withHour(0).withMinute(0), now.plusDays(1).withHour(0).withMinute(0), "Dummy-Ereignis", null),
                 new Event(List.of("Anna Schmidt"), now.withHour(20).withMinute(0), now.withHour(21).withMinute(0), "Vertical-core", null),
-                new Event(List.of("Andreas Neu"), now.withHour(20).withMinute(0), now.withHour(22).withMinute(0), "Montagsturnier", null)
+                new Event(List.of("Andreas Neu"), now.withHour(20).withMinute(0), now.withHour(22).withMinute(0), "Montagsturnier", null),
+                new Event(List.of("Anna Schmidt", "Andreas Neu"), now.withHour(16).withMinute(30), now.withHour(17).withMinute(30), "Elternabend", null),
+                new Event(List.of("Anna Schmidt", "Andreas Neu", "Lena Müller"), now.withHour(18).withMinute(0), now.withHour(19).withMinute(0), "Familienessen", null)
         );
         List<Event> tomorrowEvents = List.of(
                 new Event(List.of("Anna Schmidt"), now.plusDays(1).withHour(0).withMinute(0), now.plusDays(2).withHour(0).withMinute(0), "Dummy-Ereignis", null),
                 new Event(List.of("Anna Schmidt"), now.plusDays(1).withHour(20).withMinute(0), now.plusDays(1).withHour(21).withMinute(0), "Vertical-core", null),
-                new Event(List.of("Andreas Neu"), now.plusDays(1).withHour(20).withMinute(0), now.plusDays(1).withHour(22).withMinute(0), "Montagsturnier", null)
+                new Event(List.of("Andreas Neu"), now.plusDays(1).withHour(20).withMinute(0), now.plusDays(1).withHour(22).withMinute(0), "Montagsturnier", null),
+                new Event(List.of("Lena Müller", "Andreas Neu"), now.plusDays(1).withHour(14).withMinute(0), now.plusDays(1).withHour(15).withMinute(0), "Arzttermin", null),
+                new Event(List.of("Anna Schmidt", "Andreas Neu", "Lena Müller"), now.plusDays(1).withHour(19).withMinute(0), now.plusDays(1).withHour(20).withMinute(0), "Spieleabend", null)
         );
         List<WeatherDay> weatherDays = List.of(
                 new WeatherDay("●", "-4 / -1"),

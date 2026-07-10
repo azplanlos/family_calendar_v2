@@ -121,6 +121,8 @@ FOR /F "usebackq tokens=1,2 delims==" %%A IN (%WRAPPER_PROPERTIES%) DO (
 
 @REM Extension to allow automatically downloading the maven-wrapper.jar from Maven-Central
 @REM This allows using the maven wrapper in projects that prohibit checking in binary data.
+@REM Skip jar download if distributionType is only-script
+IF "%DISTRIBUTION_TYPE%"=="only-script" goto skipWrapperJarDownload
 IF EXIST %WRAPPER_JAR% (
     if "%MVNW_VERBOSE%"=="true" (
         echo Found %WRAPPER_JAR%
@@ -151,6 +153,7 @@ IF EXIST %WRAPPER_JAR% (
         echo Finished downloading %WRAPPER_JAR%
     )
 )
+:skipWrapperJarDownload
 @REM End of extension
 
 @REM If specified, validate the SHA-256 sum of the Maven Wrapper jar file
@@ -187,7 +190,7 @@ goto end
 
 :scriptMode
 
-SET "MAVEN_HOME=%USERPROFILE%\.m2\wrapper\dists\apache-maven-3.9.9-bin"
+SET "MAVEN_HOME=%USERPROFILE%\.m2\wrapper\dists\apache-maven-3.9.9"
 
 IF EXIST "%MAVEN_HOME%\bin\mvn.cmd" goto runMaven
 
@@ -213,13 +216,6 @@ if "%MVNW_VERBOSE%"=="true" (
 )
 
 powershell -Command "Expand-Archive -Path '%DOWNLOAD_FILE%' -DestinationPath '%USERPROFILE%\.m2\wrapper\dists' -Force"
-
-@REM Rename extracted folder
-FOR /D %%G IN ("%USERPROFILE%\.m2\wrapper\dists\apache-maven-*") DO (
-    IF NOT "%%G"=="%MAVEN_HOME%" (
-        ren "%%G" "apache-maven-3.9.9-bin"
-    )
-)
 
 del "%DOWNLOAD_FILE%" 2>nul
 

@@ -127,8 +127,8 @@ public class ImageRenderer {
                 String time = event.startTime() != null
                         ? event.startTime().format(DateTimeFormatter.ofPattern("HH:mm"))
                         : "";
-                String initials = getInitials(event);
-                drawTimedEvent(graphics, time, initials, event.summary(), x, eventY, width);
+                List<String> participants = event.participants() != null ? event.participants() : List.of();
+                drawTimedEvent(graphics, time, participants, event.summary(), x, eventY, width);
                 eventY += 30;
             }
         }
@@ -143,20 +143,15 @@ public class ImageRenderer {
                 && event.endTime().getHour() == 0 && event.endTime().getMinute() == 0;
     }
 
-    private String getInitials(Event event) {
-        if (event.participants() == null || event.participants().isEmpty()) {
+    private String getInitials(String name) {
+        if (name == null || name.isBlank()) {
             return "";
         }
-        String first = event.participants().getFirst();
-        if (first == null || first.isBlank()) {
-            return "";
-        }
-        // Ersten Buchstaben des Vornamens + ggf. Nachname
-        String[] parts = first.trim().split("\\s+");
+        String[] parts = name.trim().split("\\s+");
         if (parts.length >= 2) {
             return ("" + parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
         }
-        return first.substring(0, Math.min(2, first.length())).toUpperCase();
+        return name.substring(0, Math.min(2, name.length())).toUpperCase();
     }
 
     private void drawAllDayEvent(Graphics2D graphics, String title, int x, int y, int width) {
@@ -168,20 +163,69 @@ public class ImageRenderer {
         FontHelper.drawString(graphics, title, Aligment.CENTER, titleFont.get(), 13, COLOR_WHITE, x, y + 17, width, 25);
     }
 
-    private void drawTimedEvent(Graphics2D graphics, String time, String initials, String title, int x, int y, int width) {
+    private void drawTimedEvent(Graphics2D graphics, String time, List<String> participants, String title, int x, int y, int width) {
+        int badgeDiameter = 24;
+        int badgeOverlap = 8; // Überlappung in Pixel
+        int timeWidth = 50;
+
         // Time
-        FontHelper.drawString(graphics, time, Aligment.LEFT, terminalFont.get(), 13, COLOR_BLACK, x, y + 15, 50, 15);
+        FontHelper.drawString(graphics, time, Aligment.LEFT, terminalFont.get(), 13, COLOR_BLACK, x, y + 17, timeWidth, 15);
 
-        // Circle badge with initials
-        int badgeX = x + 55;
+        // Draw badges for each participant (overlapping, last on top)
+        int firstBadgeX = x + timeWidth + 1;
+        int badgeX = firstBadgeX;
         int badgeY = y + 2;
-        int badgeDiameter = 20;
-        graphics.setColor(COLOR_BLACK);
-        graphics.fillOval(badgeX, badgeY, badgeDiameter, badgeDiameter);
-        FontHelper.drawString(graphics, initials, Aligment.CENTER, titleFont.get(), 10, COLOR_WHITE, badgeX, badgeY + 14, badgeDiameter, badgeDiameter);
+        int frameHeight = badgeDiameter;
+        int frameY = badgeY;
 
-        // Event title
-        FontHelper.drawString(graphics, title, Aligment.LEFT, terminalFont.get(), 13, COLOR_BLACK, badgeX + badgeDiameter + 5, y + 15, width - 85, 15);
+        // Frame starts at the center of the first badge
+        int frameLeftX = firstBadgeX + badgeDiameter / 2;
+
+        // Calculate where the last badge ends to position the frame right edge
+        int badgeCount = 0;
+        for (String participant : participants) {
+            if (getInitials(participant).isEmpty()) continue;
+            badgeCount++;
+        }
+        int lastBadgeRightX = firstBadgeX + (badgeCount > 0 ? (badgeCount - 1) * (badgeDiameter - badgeOverlap) + badgeDiameter : 0);
+
+        // Title frame extends from center of first badge to end of available width
+        int titleX = lastBadgeRightX + 3;
+        int titleWidth = x + width - titleX;
+        int frameRightX = x + width;
+        int frameWidth = frameRightX - frameLeftX;
+
+        // Draw frame first (behind badges)
+        graphics.setColor(COLOR_BLACK);
+        graphics.drawRect(frameLeftX, frameY, frameWidth, frameHeight);
+
+        // Draw badges on top of frame (overlapping each other)
+        badgeX = firstBadgeX;
+        for (String participant : participants) {
+            String initials = getInitials(participant);
+            if (initials.isEmpty()) continue;
+
+            // Circle badge
+            graphics.setColor(COLOR_BLACK);
+            graphics.fillOval(badgeX, badgeY, badgeDiameter, badgeDiameter);
+
+            // Centered initials using FontMetrics
+            Font badgeFont = titleFont.get().deriveFont(11f);
+            graphics.setFont(badgeFont);
+            FontMetrics fm = graphics.getFontMetrics();
+            int textWidth = fm.stringWidth(initials);
+            int textX = badgeX + (badgeDiameter - textWidth) / 2;
+            int textY = badgeY + (badgeDiameter - fm.getHeight()) / 2 + fm.getAscent();
+            graphics.setColor(COLOR_WHITE);
+            graphics.drawString(initials, textX, textY);
+
+            badgeX += badgeDiameter - badgeOverlap;
+        }
+
+        // Event title inside the frame (after last badge)
+        if (titleWidth > 0) {
+            FontHelper.drawString(graphics, title, Aligment.LEFT, terminalFont.get(), 13, COLOR_BLACK, titleX + 4, frameY + 16, titleWidth - 8, frameHeight);
+        }
     }
 
     // ========== WEATHER FORECAST ==========
