@@ -83,6 +83,7 @@ public class CalendarParser {
         return eventStart.isBefore(rangeEnd) && eventEnd.isAfter(rangeStart);
     }
 
+    @SuppressWarnings("unchecked")
     private List<Event> parseMonth(InputStream inputStream, YearMonth month) throws IOException, ParserException {
         CalendarBuilder builder = new CalendarBuilder();
         Calendar calendar = builder.build(inputStream);
@@ -95,13 +96,35 @@ public class CalendarParser {
 
         for (var component : calendar.getComponents(Component.VEVENT)) {
             VEvent vEvent = (VEvent) component;
-            Set<Period<ZonedDateTime>> occurrences = vEvent.calculateRecurrenceSet(monthPeriod);
+            // calculateRecurrenceSet kann Period<LocalDate> (ganztägig) oder Period<ZonedDateTime> liefern
+            Set<?> occurrences = vEvent.calculateRecurrenceSet(monthPeriod);
 
-            for (Period<ZonedDateTime> occurrence : occurrences) {
+            for (Object obj : occurrences) {
+                Period<?> occurrence = (Period<?>) obj;
                 Event baseEvent = mapper.mapVeventEvent(vEvent);
-                // Für jede Occurrence die tatsächlichen Start/End-Zeiten setzen
-                LocalDateTime occurrenceStart = occurrence.getStart().toLocalDateTime();
-                LocalDateTime occurrenceEnd = occurrence.getEnd().toLocalDateTime();
+
+                LocalDateTime occurrenceStart;
+                LocalDateTime occurrenceEnd;
+
+                Object start = occurrence.getStart();
+                Object end = occurrence.getEnd();
+
+                if (start instanceof ZonedDateTime zdt) {
+                    occurrenceStart = zdt.toLocalDateTime();
+                    occurrenceEnd = (end instanceof ZonedDateTime zdtEnd)
+                            ? zdtEnd.toLocalDateTime()
+                            : zdt.plusHours(1).toLocalDateTime();
+                } else if (start instanceof LocalDate ld) {
+                    // Ganztägiges Event: Start um Mitternacht, Ende am nächsten Tag (oder angegebenes Ende)
+                    occurrenceStart = ld.atStartOfDay();
+                    occurrenceEnd = (end instanceof LocalDate ldEnd)
+                            ? ldEnd.atStartOfDay()
+                            : ld.plusDays(1).atStartOfDay();
+                } else {
+                    // Fallback: überspringen
+                    continue;
+                }
+
                 events.add(new Event(
                         baseEvent.participants(),
                         occurrenceStart,
