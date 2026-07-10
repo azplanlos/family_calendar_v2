@@ -29,7 +29,10 @@ jobs:
           cache: maven
 
       - name: Set version in POM
-        run: mvn versions:set -DnewVersion=${{ inputs.version }} -DgenerateBackupPoms=false
+        run: |
+          VERSION="${{ inputs.version }}"
+          VERSION="${VERSION#v}"
+          mvn versions:set -DnewVersion=$VERSION -DgenerateBackupPoms=false
 
       - name: Build with Maven
         run: mvn package -DskipTests

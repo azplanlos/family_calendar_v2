@@ -6,16 +6,16 @@ import java.awt.image.BufferedImage;
  * Extrahiert aus einem 3-Farben-IndexColorModel-Bild (800x480) zwei separate Bitplanes
  * für das e-ink Display:
  * <ul>
- *   <li>Black-Plane: 1 Bit pro Pixel, gesetzt wenn Pixel-Index == 1 (schwarz)</li>
- *   <li>Red-Plane: 1 Bit pro Pixel, gesetzt wenn Pixel-Index == 2 (rot)</li>
+ *   <li>Black-Plane: 1 Bit pro Pixel, Bit=0 wenn Pixel schwarz oder rot, Bit=1 wenn weiß</li>
+ *   <li>Red-Plane: 1 Bit pro Pixel, Bit=1 wenn Pixel rot, Bit=0 sonst</li>
  * </ul>
  * <p>
  * Ausgabeformat: [48000 Bytes Black-Plane][48000 Bytes Red-Plane] = 96000 Bytes total.
  * Jedes Byte enthält 8 Pixel, MSB zuerst (links → rechts), Zeilen von oben nach unten.
  * <p>
- * Für das Waveshare 7.5" B/W/R Panel gilt:
- * Black-Plane: Bit=1 → schwarzes Pixel, Bit=0 → weiß
- * Red-Plane: Bit=1 → rotes Pixel, Bit=0 → kein Rot
+ * Für das Waveshare 7.5" B/W/R Panel mit GxEPD2 writeImage gilt:
+ * Black-Plane (Command 0x10): Bit=0 → schwarzes Pixel, Bit=1 → weiß
+ * Red-Plane (Command 0x13): Bit=1 → rotes Pixel (wird intern nochmals invertiert)
  */
 public class BitplaneExporter {
 
@@ -30,6 +30,10 @@ public class BitplaneExporter {
 
     /**
      * Konvertiert das gerenderte BufferedImage in das Raw-Bitplane-Format.
+     * <p>
+     * Für das GxEPD2 Waveshare 7.5" B/W/R Panel (Command 0x10/0x13):
+     * Black-Plane: Bit=0 → schwarzes Pixel, Bit=1 → weiß (invertierte Logik!)
+     * Red-Plane: Bit=1 → rotes Pixel, Bit=0 → kein Rot
      *
      * @param image 800x480 BufferedImage mit IndexColorModel (2 Bit, 3 Farben)
      * @return byte[96000]: erste 48000 Bytes = Black-Plane, nächste 48000 = Red-Plane
@@ -45,6 +49,11 @@ public class BitplaneExporter {
         byte[] blackPlane = new byte[PLANE_SIZE];
         byte[] redPlane = new byte[PLANE_SIZE];
 
+        // Initialize black plane to 0xFF (all white) - GxEPD2 convention: 1=white, 0=black
+        for (int i = 0; i < PLANE_SIZE; i++) {
+            blackPlane[i] = (byte) 0xFF;
+        }
+
         int byteIndex = 0;
         int bitIndex = 7; // MSB first
 
@@ -55,11 +64,15 @@ public class BitplaneExporter {
                 int pixelIndex = image.getRaster().getSample(x, y, 0);
 
                 if (pixelIndex == INDEX_BLACK) {
-                    blackPlane[byteIndex] |= (byte) (1 << bitIndex);
+                    // Black: clear bit in black plane (0 = black pixel)
+                    blackPlane[byteIndex] &= (byte) ~(1 << bitIndex);
                 } else if (pixelIndex == INDEX_RED) {
+                    // Red: set bit in red plane (1 = red pixel)
                     redPlane[byteIndex] |= (byte) (1 << bitIndex);
+                    // Also clear bit in black plane for red pixels (0 = not white)
+                    blackPlane[byteIndex] &= (byte) ~(1 << bitIndex);
                 }
-                // INDEX_TRANSPARENT (0) → beide Planes bleiben 0 → weiß
+                // INDEX_TRANSPARENT (0) → black plane stays 1 (white), red plane stays 0
 
                 bitIndex--;
                 if (bitIndex < 0) {

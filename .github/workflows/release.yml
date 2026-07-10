@@ -21,12 +21,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set version in POM
-        run: |
-          VERSION="${{ github.event.release.tag_name }}"
-          VERSION="${VERSION#v}"
-          mvn versions:set -DnewVersion=$VERSION -DgenerateBackupPoms=false
-
       - name: Download JAR
         uses: actions/download-artifact@v4
         with:

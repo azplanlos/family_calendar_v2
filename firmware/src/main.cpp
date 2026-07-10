@@ -110,7 +110,7 @@ void setup() {
 
     // Initialize display
     display.init(115200, true, 2, false);
-    display.setRotation(2); // 180° rotation, matching CircuitPython implementation
+    display.setRotation(0); // No rotation needed; image is pre-rendered in correct orientation
 
     // Connect to WiFi and fetch image, then overlay battery indicator
     if (connectWiFi()) {
@@ -258,8 +258,9 @@ bool fetchImage() {
 void showImage(int batteryPercent) {
     Serial.println("[Display] Writing image to e-paper...");
 
-    // First write the backend image
-    display.writeNative(blackBuffer, redBuffer, 0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, false, false, false);
+    // First write the backend image using writeImage with both planes
+    // writeImage sends black plane to command 0x10 and color plane to command 0x13
+    display.writeImage(blackBuffer, redBuffer, 0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, false, false, false);
 
     // Overlay battery indicator in top-left corner
     drawBatteryIndicator(batteryPercent);
