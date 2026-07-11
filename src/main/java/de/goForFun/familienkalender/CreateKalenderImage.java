@@ -79,7 +79,12 @@ public class CreateKalenderImage implements RequestHandler<ScheduledEvent, Void>
                     new WeatherDay("☁", "-7 / -1")
             );
 
-            RenderData renderData = new RenderData(now, todayEvents, tomorrowEvents, weatherDays, calendarEvents, participants);
+            RenderData renderData = new RenderData(now, todayEvents, tomorrowEvents, weatherDays, calendarEvents, participants, eventRepository.getErrors());
+
+            // Feed-Fehler loggen
+            for (String error : eventRepository.getErrors()) {
+                logger.log("FEED ERROR: " + error);
+            }
 
             // Bild rendern
             BufferedImage image = imageRenderer.createImage(renderData);

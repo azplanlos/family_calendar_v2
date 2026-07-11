@@ -17,6 +17,7 @@ import java.util.*;
 public class EventRepository {
 
     private final List<Event> allEvents;
+    private final List<String> errors;
 
     /**
      * Erstellt ein EventRepository aus einem iCal-Feed (URI) und optionalem HolidayProvider.
@@ -44,6 +45,8 @@ public class EventRepository {
     /**
      * Erstellt ein EventRepository aus einem iCal-Feed, optionalem Schulkalender-Feed,
      * optionalem Ferien-Feed und optionalem HolidayProvider.
+     * Einzelne Feed-Fehler werden abgefangen – das Repository liefert dann die Events
+     * der erfolgreich geladenen Feeds und sammelt die Fehlermeldungen in {@link #getErrors()}.
      *
      * @param feedUri             URI des Familien-iCal-Feeds
      * @param schoolFeedUri       URI des Schulkalender-Feeds (kann null sein)
@@ -54,17 +57,45 @@ public class EventRepository {
     public EventRepository(URI feedUri, URI schoolFeedUri, URI vacationFeedUri, LocalDate referenceDate, HolidayProvider holidayProvider) throws IOException, ParserException {
         YearMonth month = YearMonth.from(referenceDate);
         IcalParser icalParser = new IcalParser();
-        List<Event> events = new ArrayList<>(icalParser.parse(feedUri, month, EventSource.CALENDAR));
+        List<Event> events = new ArrayList<>();
+        List<String> errors = new ArrayList<>();
+
+        // Hauptkalender-Feed laden
+        try {
+            events.addAll(icalParser.parse(feedUri, month, EventSource.CALENDAR));
+        } catch (IOException | ParserException e) {
+            errors.add("Kalender-Feed: " + e.getMessage());
+        }
+
+        // Schulkalender-Feed laden
         if (schoolFeedUri != null) {
-            events.addAll(icalParser.parse(schoolFeedUri, month, EventSource.SCHOOL));
+            try {
+                events.addAll(icalParser.parse(schoolFeedUri, month, EventSource.SCHOOL));
+            } catch (IOException | ParserException e) {
+                errors.add("Schulkalender: " + e.getMessage());
+            }
         }
+
+        // Ferien-Feed laden
         if (vacationFeedUri != null) {
-            events.addAll(icalParser.parse(vacationFeedUri, month, EventSource.VACATION));
+            try {
+                events.addAll(icalParser.parse(vacationFeedUri, month, EventSource.VACATION));
+            } catch (IOException | ParserException e) {
+                errors.add("Ferien-Feed: " + e.getMessage());
+            }
         }
+
+        // Feiertage laden
         if (holidayProvider != null) {
-            events.addAll(holidayProvider.getHolidaysForRange(month.atDay(1), month.atEndOfMonth()));
+            try {
+                events.addAll(holidayProvider.getHolidaysForRange(month.atDay(1), month.atEndOfMonth()));
+            } catch (Exception e) {
+                errors.add("Feiertage: " + e.getMessage());
+            }
         }
+
         this.allEvents = Collections.unmodifiableList(events);
+        this.errors = Collections.unmodifiableList(errors);
     }
 
     /**
@@ -92,6 +123,8 @@ public class EventRepository {
 
     /**
      * Erstellt ein EventRepository aus InputStreams (z.B. für Tests).
+     * Einzelne Feed-Fehler werden abgefangen – das Repository liefert dann die Events
+     * der erfolgreich geladenen Feeds und sammelt die Fehlermeldungen in {@link #getErrors()}.
      *
      * @param inputStream           InputStream mit Familien-iCal-Daten
      * @param schoolInputStream     InputStream mit Schulkalender-Daten (kann null sein)
@@ -102,17 +135,45 @@ public class EventRepository {
     public EventRepository(InputStream inputStream, InputStream schoolInputStream, InputStream vacationInputStream, LocalDate referenceDate, HolidayProvider holidayProvider) throws IOException, ParserException {
         YearMonth month = YearMonth.from(referenceDate);
         IcalParser icalParser = new IcalParser();
-        List<Event> events = new ArrayList<>(icalParser.parse(inputStream, month, EventSource.CALENDAR));
+        List<Event> events = new ArrayList<>();
+        List<String> errors = new ArrayList<>();
+
+        // Hauptkalender-Feed laden
+        try {
+            events.addAll(icalParser.parse(inputStream, month, EventSource.CALENDAR));
+        } catch (IOException | ParserException e) {
+            errors.add("Kalender-Feed: " + e.getMessage());
+        }
+
+        // Schulkalender-Feed laden
         if (schoolInputStream != null) {
-            events.addAll(icalParser.parse(schoolInputStream, month, EventSource.SCHOOL));
+            try {
+                events.addAll(icalParser.parse(schoolInputStream, month, EventSource.SCHOOL));
+            } catch (IOException | ParserException e) {
+                errors.add("Schulkalender: " + e.getMessage());
+            }
         }
+
+        // Ferien-Feed laden
         if (vacationInputStream != null) {
-            events.addAll(icalParser.parse(vacationInputStream, month, EventSource.VACATION));
+            try {
+                events.addAll(icalParser.parse(vacationInputStream, month, EventSource.VACATION));
+            } catch (IOException | ParserException e) {
+                errors.add("Ferien-Feed: " + e.getMessage());
+            }
         }
+
+        // Feiertage laden
         if (holidayProvider != null) {
-            events.addAll(holidayProvider.getHolidaysForRange(month.atDay(1), month.atEndOfMonth()));
+            try {
+                events.addAll(holidayProvider.getHolidaysForRange(month.atDay(1), month.atEndOfMonth()));
+            } catch (Exception e) {
+                errors.add("Feiertage: " + e.getMessage());
+            }
         }
+
         this.allEvents = Collections.unmodifiableList(events);
+        this.errors = Collections.unmodifiableList(errors);
     }
 
     /**
@@ -191,6 +252,14 @@ public class EventRepository {
                 .distinct()
                 .sorted()
                 .toList();
+    }
+
+    /**
+     * Gibt die Liste der Fehlermeldungen zurück, die beim Laden der Feeds aufgetreten sind.
+     * Leer wenn alle Feeds erfolgreich geladen wurden.
+     */
+    public List<String> getErrors() {
+        return errors;
     }
 
     private boolean eventOverlapsRange(Event event, ZonedDateTime rangeStart, ZonedDateTime rangeEnd) {

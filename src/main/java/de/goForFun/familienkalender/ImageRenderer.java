@@ -111,6 +111,7 @@ public class ImageRenderer {
         drawDayColumns(today, data.todayEvents(), data.tomorrowEvents(), graphics);
         drawWeatherForecast(data.weatherDays(), graphics);
         drawMonthCalendar(today, data.calendarEvents(), data.participants(), graphics);
+        drawErrors(data.errors(), graphics);
         drawFooter(data.now(), graphics);
 
         graphics.dispose();
@@ -878,6 +879,26 @@ public class ImageRenderer {
             }
         } catch (WriterException e) {
             // QR-Code konnte nicht erstellt werden – still ignorieren
+        }
+    }
+
+    // ========== ERRORS ==========
+
+    /**
+     * Zeichnet Fehlermeldungen oberhalb der letzten Aktualisierung (Footer).
+     * Jede Fehlermeldung wird in rot als einzeilige Zeile gerendert.
+     */
+    private void drawErrors(List<String> errors, Graphics2D graphics) {
+        if (errors == null || errors.isEmpty()) {
+            return;
+        }
+        int lineHeight = 12;
+        int footerHeight = 16;
+        // Von unten nach oben: Footer braucht footerHeight, Fehler werden darüber platziert
+        int y = IMAGE_HEIGHT - footerHeight - (errors.size() * lineHeight);
+        for (String error : errors) {
+            FontHelper.drawString(graphics, "\u26A0 " + error, Aligment.RIGHT, terminalFont.get(), 9, COLOR_RED, 0, y + 9, RIGHT_EDGE, lineHeight);
+            y += lineHeight;
         }
     }
 
