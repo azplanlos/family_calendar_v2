@@ -13,6 +13,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.time.format.TextStyle;
@@ -339,7 +341,11 @@ public class ImageRenderer {
         // Version (bottom left)
         FontHelper.drawString(graphics, "v" + VersionInfo.getVersion(), Aligment.LEFT, terminalFont.get(), 10, COLOR_BLACK, 10, IMAGE_HEIGHT - 12, 200, 10);
 
-        // Last update (bottom right)
-        FontHelper.drawString(graphics, String.format("letzte Aktualisierung: %s", DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).format(dt)), Aligment.RIGHT, terminalFont.get(), 10, COLOR_BLACK, 0, IMAGE_HEIGHT - 12, RIGHT_EDGE, 10);
+        // Last update (bottom right) – rendered in German locale and Europe/Berlin timezone
+        ZonedDateTime berlinTime = dt.atZone(ZoneId.of("Europe/Berlin"));
+        String formattedTime = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM)
+                .withLocale(Locale.GERMANY)
+                .format(berlinTime);
+        FontHelper.drawString(graphics, String.format("letzte Aktualisierung: %s", formattedTime), Aligment.RIGHT, terminalFont.get(), 10, COLOR_BLACK, 0, IMAGE_HEIGHT - 12, RIGHT_EDGE, 10);
     }
 }
