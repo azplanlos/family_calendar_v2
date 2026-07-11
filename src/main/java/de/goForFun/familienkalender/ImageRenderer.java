@@ -104,7 +104,7 @@ public class ImageRenderer {
         drawHeader(data.now(), graphics);
         drawDayColumns(today, data.todayEvents(), data.tomorrowEvents(), graphics);
         drawWeatherForecast(data.weatherDays(), graphics);
-        drawMonthCalendar(today, graphics);
+        drawMonthCalendar(today, data.calendarEvents(), data.participants(), graphics);
         drawFooter(data.now(), graphics);
 
         graphics.dispose();
@@ -511,7 +511,7 @@ public class ImageRenderer {
 
     // ========== WEEK CALENDAR (5 weeks) ==========
 
-    private void drawMonthCalendar(LocalDate today, Graphics2D graphics) {
+    private void drawMonthCalendar(LocalDate today, List<Event> calendarEvents, List<String> participants, Graphics2D graphics) {
         int y = CALENDAR_Y;
 
         // Calculate cell width so that right edge of grid aligns with RIGHT_EDGE
@@ -551,12 +551,15 @@ public class ImageRenderer {
             int sectionRows = 0;
             // Track which columns are occupied per row (for partial rows at month boundaries)
             java.util.List<int[]> rowColRanges = new java.util.ArrayList<>();
+            // Track the actual date for each (row, col) so we can draw indicator bars later
+            java.util.List<java.util.Map<Integer, LocalDate>> rowDayMaps = new java.util.ArrayList<>();
 
             // Render all rows for this month
             while (cursor.isBefore(endDate) && cursor.getMonthValue() == currentMonth) {
                 LocalDate rowMonday = cursor.with(DayOfWeek.MONDAY);
                 int startCol = cursor.getDayOfWeek().getValue() - 1; // 0=Mon
                 int endCol = startCol; // will track last occupied column (inclusive)
+                java.util.Map<Integer, LocalDate> dayMap = new java.util.HashMap<>();
 
                 // Draw cell content for this row (backgrounds, text)
                 for (int col = startCol; col < 7; col++) {
@@ -566,6 +569,7 @@ public class ImageRenderer {
 
                     int cellX = x + col * cellWidth;
                     int cellY = currentY;
+                    dayMap.put(col, day);
 
                     // Weekend background: light dithered gray pattern
                     if (col >= 5 && !day.equals(today)) {
@@ -587,6 +591,7 @@ public class ImageRenderer {
                 }
 
                 rowColRanges.add(new int[]{startCol, endCol});
+                rowDayMaps.add(dayMap);
                 currentY += cellHeight;
                 sectionRows++;
 
@@ -623,6 +628,52 @@ public class ImageRenderer {
                     graphics.drawLine(cellX + cellWidth, cellY, cellX + cellWidth, cellY + cellHeight);
                 }
             }
+
+            // Draw indicator bars for each cell in this section
+            int barHeight = 2;
+            for (int row = 0; row < sectionRows; row++) {
+                int[] range = rowColRanges.get(row);
+                int firstCol = range[0];
+                int lastCol = range[1];
+                int rowY = sectionStartY + row * cellHeight;
+                java.util.Map<Integer, LocalDate> dayMap = rowDayMaps.get(row);
+
+                for (int col = firstCol; col <= lastCol; col++) {
+                    LocalDate day = dayMap.get(col);
+                    if (day == null) continue;
+
+                    int cellX = x + col * cellWidth;
+                    int cellY = rowY;
+
+                    // === Top-edge bars: one per participant ===
+                    // Bars are 2px tall, placed inside the cell directly below the top border (1px line)
+                    int barY = cellY + 1;
+                    for (int pIdx = 0; pIdx < participants.size(); pIdx++) {
+                        String participant = participants.get(pIdx);
+                        boolean hasEvent = hasParticipantEventOnDay(calendarEvents, participant, day);
+                        if (hasEvent) {
+                            // Alternate colors: even index = black, odd index = red
+                            Color barColor = (pIdx % 2 == 0) ? COLOR_BLACK : COLOR_RED;
+                            graphics.setColor(barColor);
+                            graphics.fillRect(cellX + 1, barY, cellWidth - 1, barHeight);
+                        }
+                        barY += barHeight;
+                    }
+
+                    // === Bottom-edge bar: unassigned events (SCHOOL, VACATION, HOLIDAY) ===
+                    boolean hasHolidayOrVacation = hasUnassignedEventOnDay(calendarEvents, day, true);
+                    boolean hasSchool = hasUnassignedEventOnDay(calendarEvents, day, false);
+                    if (hasHolidayOrVacation) {
+                        // Red bar for HOLIDAY or VACATION
+                        graphics.setColor(COLOR_RED);
+                        graphics.fillRect(cellX + 1, cellY + cellHeight - 1 - barHeight, cellWidth - 1, barHeight);
+                    } else if (hasSchool) {
+                        // Black bar for SCHOOL
+                        graphics.setColor(COLOR_BLACK);
+                        graphics.fillRect(cellX + 1, cellY + cellHeight - 1 - barHeight, cellWidth - 1, barHeight);
+                    }
+                }
+            }
         }
 
         // Draw today's red border on top of the black grid lines (overwrites black with red)
@@ -637,6 +688,48 @@ public class ImageRenderer {
             // Right edge
             graphics.drawLine(todayCellX + cellWidth, todayCellY, todayCellX + cellWidth, todayCellY + cellHeight);
         }
+    }
+
+    // ========== CALENDAR INDICATOR BAR HELPERS ==========
+
+    /**
+     * Prüft ob ein bestimmter Teilnehmer an einem bestimmten Tag einen Termin hat.
+     */
+    private boolean hasParticipantEventOnDay(List<Event> calendarEvents, String participant, LocalDate day) {
+        LocalDateTime dayStart = day.atStartOfDay();
+        LocalDateTime dayEnd = day.plusDays(1).atStartOfDay();
+        return calendarEvents.stream()
+                .filter(e -> e.source() == EventSource.CALENDAR)
+                .filter(e -> e.participants() != null && e.participants().contains(participant))
+                .anyMatch(e -> eventOverlapsDay(e, dayStart, dayEnd));
+    }
+
+    /**
+     * Prüft ob es an einem Tag nicht zugeordnete Events gibt (SCHOOL, VACATION, HOLIDAY).
+     *
+     * @param holidayOrVacation true = nur HOLIDAY/VACATION prüfen, false = nur SCHOOL prüfen
+     */
+    private boolean hasUnassignedEventOnDay(List<Event> calendarEvents, LocalDate day, boolean holidayOrVacation) {
+        LocalDateTime dayStart = day.atStartOfDay();
+        LocalDateTime dayEnd = day.plusDays(1).atStartOfDay();
+        return calendarEvents.stream()
+                .filter(e -> {
+                    if (holidayOrVacation) {
+                        return e.source() == EventSource.HOLIDAY || e.source() == EventSource.VACATION;
+                    } else {
+                        return e.source() == EventSource.SCHOOL;
+                    }
+                })
+                .anyMatch(e -> eventOverlapsDay(e, dayStart, dayEnd));
+    }
+
+    /**
+     * Prüft ob ein Event den Zeitraum eines Tages überlappt.
+     */
+    private boolean eventOverlapsDay(Event event, LocalDateTime dayStart, LocalDateTime dayEnd) {
+        if (event.startTime() == null) return false;
+        LocalDateTime eventEnd = event.endTime() != null ? event.endTime() : event.startTime().plusHours(1);
+        return event.startTime().isBefore(dayEnd) && eventEnd.isAfter(dayStart);
     }
 
     // ========== DITHERING HELPER ==========

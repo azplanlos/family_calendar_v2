@@ -18,6 +18,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -63,6 +64,14 @@ public class CreateKalenderImage implements RequestHandler<ScheduledEvent, Void>
             List<Event> todayEvents = eventRepository.getEventsForDay(today);
             List<Event> tomorrowEvents = eventRepository.getEventsForDay(today.plusDays(1));
 
+            // 5-Wochen-Bereich für Monatskalender: ab Montag der aktuellen Woche, 35 Tage
+            LocalDate calendarStart = today.with(DayOfWeek.MONDAY);
+            LocalDate calendarEnd = calendarStart.plusWeeks(5).minusDays(1);
+            List<Event> calendarEvents = eventRepository.getEventsForRange(calendarStart, calendarEnd);
+
+            // Geordnete Liste aller Familienmitglieder (aus allen bekannten Events)
+            List<String> participants = eventRepository.getAllParticipants();
+
             // TODO: Wetterdaten aus externer API laden
             List<WeatherDay> weatherDays = List.of(
                     new WeatherDay("●", "-4 / -1"),
@@ -70,7 +79,7 @@ public class CreateKalenderImage implements RequestHandler<ScheduledEvent, Void>
                     new WeatherDay("☁", "-7 / -1")
             );
 
-            RenderData renderData = new RenderData(now, todayEvents, tomorrowEvents, weatherDays);
+            RenderData renderData = new RenderData(now, todayEvents, tomorrowEvents, weatherDays, calendarEvents, participants);
 
             // Bild rendern
             BufferedImage image = imageRenderer.createImage(renderData);

@@ -9,8 +9,13 @@ import org.junit.jupiter.api.Test;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 
 public class TestImageCreation {
 
@@ -51,7 +56,7 @@ public class TestImageCreation {
                 new WeatherDay("☁", "-7 / -1")
         );
 
-        RenderData renderData = new RenderData(now, todayEvents, tomorrowEvents, weatherDays);
+        RenderData renderData = buildRenderData(now, todayEvents, tomorrowEvents, weatherDays);
 
         ImageRenderer imageRenderer = new ImageRenderer();
         OutputStream outputStream = new FileOutputStream("test.png");
@@ -76,7 +81,7 @@ public class TestImageCreation {
                 new WeatherDay("☁", "20 / 26")
         );
 
-        RenderData renderData = new RenderData(now, todayEvents, tomorrowEvents, weatherDays);
+        RenderData renderData = buildRenderData(now, todayEvents, tomorrowEvents, weatherDays);
 
         ImageRenderer imageRenderer = new ImageRenderer();
         OutputStream outputStream = new FileOutputStream("test_vacation_smiley.png");
@@ -100,10 +105,34 @@ public class TestImageCreation {
                 new WeatherDay("☀", "7 / 14")
         );
 
-        RenderData renderData = new RenderData(now, todayEvents, tomorrowEvents, weatherDays);
+        RenderData renderData = buildRenderData(now, todayEvents, tomorrowEvents, weatherDays);
 
         ImageRenderer imageRenderer = new ImageRenderer();
         OutputStream outputStream = new FileOutputStream("test_overnight.png");
         imageRenderer.renderImage(outputStream, renderData);
+    }
+
+    /**
+     * Hilfsmethode: Baut RenderData inkl. calendarEvents und participants aus den übergebenen Event-Listen.
+     */
+    private RenderData buildRenderData(LocalDateTime now, List<Event> todayEvents, List<Event> tomorrowEvents, List<WeatherDay> weatherDays) {
+        // Alle Events zusammenführen als calendarEvents (für Test-Zwecke)
+        List<Event> calendarEvents = new ArrayList<>();
+        calendarEvents.addAll(todayEvents);
+        calendarEvents.addAll(tomorrowEvents);
+
+        // Participants extrahieren
+        LinkedHashSet<String> participantSet = new LinkedHashSet<>();
+        for (Event event : calendarEvents) {
+            if (event.participants() != null) {
+                event.participants().stream()
+                        .filter(Objects::nonNull)
+                        .filter(p -> !p.isBlank())
+                        .forEach(participantSet::add);
+            }
+        }
+        List<String> participants = List.copyOf(participantSet);
+
+        return new RenderData(now, todayEvents, tomorrowEvents, weatherDays, calendarEvents, participants);
     }
 }

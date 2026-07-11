@@ -176,6 +176,22 @@ public class EventRepository {
                 .toList();
     }
 
+    /**
+     * Gibt eine alphabetisch sortierte Liste aller bekannten Teilnehmer (Personen) zurück,
+     * extrahiert aus allen Events im Repository. Alphabetische Sortierung garantiert eine
+     * konsistente Reihenfolge unabhängig davon, in welcher Reihenfolge Events geladen wurden.
+     */
+    public List<String> getAllParticipants() {
+        return allEvents.stream()
+                .map(Event::participants)
+                .filter(java.util.Objects::nonNull)
+                .flatMap(List::stream)
+                .filter(p -> p != null && !p.isBlank())
+                .distinct()
+                .sorted()
+                .toList();
+    }
+
     private boolean eventOverlapsRange(Event event, ZonedDateTime rangeStart, ZonedDateTime rangeEnd) {
         if (event.startTime() == null) {
             return false;
