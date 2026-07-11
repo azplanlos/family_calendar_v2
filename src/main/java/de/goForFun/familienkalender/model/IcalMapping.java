@@ -21,6 +21,7 @@ public interface IcalMapping {
     @Mapping(target = "startTime", expression = "java(unwrapDateProperty(vEvent.getStartDate()))")
     @Mapping(target = "endTime", expression = "java(unwrapDateProperty(vEvent.getEndDate()))")
     @Mapping(target = "color", expression = "java(extractColor(vEvent))")
+    @Mapping(target = "source", expression = "java(de.goForFun.familienkalender.model.EventSource.CALENDAR)")
     Event mapVeventEvent(VEvent vEvent);
 
     List<String> mapAttendees(List<Attendee> value);

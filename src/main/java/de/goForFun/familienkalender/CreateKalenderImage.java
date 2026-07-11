@@ -31,12 +31,17 @@ public class CreateKalenderImage implements RequestHandler<ScheduledEvent, Void>
 
     private static final String AWS_REGION = System.getenv("AWS_REGION");
     private static final String CALENDAR_FEED = System.getenv("CALENDAR_FEED");
+    private static final String HOLIDAY_COUNTRY = System.getenv("HOLIDAY_COUNTRY") != null
+            ? System.getenv("HOLIDAY_COUNTRY") : "de";
+    private static final String HOLIDAY_STATE = System.getenv("HOLIDAY_STATE") != null
+            ? System.getenv("HOLIDAY_STATE") : "by";
     private static final String S3_BUCKET = "familienkalender";
     private static final String S3_KEY_PNG = "calendar.png";
     private static final String S3_KEY_BIN = "calendar.bin";
 
     private final ImageRenderer imageRenderer = new ImageRenderer();
     private final BitplaneExporter bitplaneExporter = new BitplaneExporter();
+    private final HolidayProvider holidayProvider = new HolidayProvider(HOLIDAY_COUNTRY, HOLIDAY_STATE);
 
     @Override
     public Void handleRequest(ScheduledEvent input, Context context) {
@@ -47,10 +52,10 @@ public class CreateKalenderImage implements RequestHandler<ScheduledEvent, Void>
             LocalDateTime now = LocalDateTime.now();
             LocalDate today = now.toLocalDate();
 
-            // Kalender-Feed laden und alle Events des aktuellen Monats parsen
-            CalendarParser calendarParser = new CalendarParser(URI.create(CALENDAR_FEED), today);
-            List<Event> todayEvents = calendarParser.getEventsForDay(today);
-            List<Event> tomorrowEvents = calendarParser.getEventsForDay(today.plusDays(1));
+            // EventRepository sammelt iCal-Events und Feiertage zentral
+            EventRepository eventRepository = new EventRepository(URI.create(CALENDAR_FEED), today, holidayProvider);
+            List<Event> todayEvents = eventRepository.getEventsForDay(today);
+            List<Event> tomorrowEvents = eventRepository.getEventsForDay(today.plusDays(1));
 
             // TODO: Wetterdaten aus externer API laden
             List<WeatherDay> weatherDays = List.of(

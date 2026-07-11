@@ -8,6 +8,7 @@ public record Event(
         LocalDateTime startTime,
         LocalDateTime endTime,
         String summary,
-        String color
+        String color,
+        EventSource source
 ) {
 }
