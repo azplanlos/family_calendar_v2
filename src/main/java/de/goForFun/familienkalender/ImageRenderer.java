@@ -73,6 +73,14 @@ public class ImageRenderer {
         }
     });
 
+    Supplier<Font> terminalBoldFont = Suppliers.memoize(() -> {
+        try {
+            return Font.createFont(Font.TRUETYPE_FONT, Objects.requireNonNull(this.getClass().getResource("/fonts/SourceCodePro-Bold.ttf")).openStream());
+        } catch (FontFormatException | IOException e) {
+            throw new RuntimeException(e);
+        }
+    });
+
     /**
      * Erstellt das Kalenderbild und schreibt es als PNG in den OutputStream.
      */
@@ -228,10 +236,7 @@ public class ImageRenderer {
         int frameHeight = badgeDiameter;
         int frameY = badgeY;
 
-        // Frame starts at the center of the first badge
-        int frameLeftX = firstBadgeX + badgeDiameter / 2;
-
-        // Calculate where the last badge ends to position the frame right edge
+        // Calculate where the last badge ends
         int badgeCount = 0;
         for (String participant : participants) {
             if (getInitials(participant).isEmpty()) continue;
@@ -239,7 +244,13 @@ public class ImageRenderer {
         }
         int lastBadgeRightX = firstBadgeX + (badgeCount > 0 ? (badgeCount - 1) * (badgeDiameter - badgeOverlap) + badgeDiameter : 0);
 
-        // Title frame extends from center of first badge to end of available width
+        // Frame starts at the right-center of the last badge:
+        // horizontal = right edge of last badge minus half diameter (= center of last badge)
+        // This way the badge's right half overlaps into the frame and edges are flush
+        int lastBadgeX = firstBadgeX + (badgeCount > 0 ? (badgeCount - 1) * (badgeDiameter - badgeOverlap) : 0);
+        int frameLeftX = lastBadgeX + badgeDiameter / 2;
+
+        // Title starts after the last badge with a small gap
         int titleX = lastBadgeRightX + 3;
         int titleWidth = x + width - titleX;
         int frameRightX = x + width;
@@ -328,12 +339,12 @@ public class ImageRenderer {
         int currentMonth = -1;
 
         LocalDate cursor = weekStart;
+        // Track today's cell position for red highlight border
+        int todayCellX = -1, todayCellY = -1;
+
         while (cursor.isBefore(endDate)) {
             // Check if we entered a new month
             if (cursor.getMonthValue() != currentMonth) {
-                // If we were mid-row in the previous month, advance to next row
-                // (this is handled by starting each month section fresh)
-
                 // Draw month header
                 String monthYear = cursor.getMonth().getDisplayName(TextStyle.FULL, Locale.GERMAN) + " " + cursor.getYear();
                 FontHelper.drawString(graphics, monthYear, Aligment.RIGHT, titleFont.get(), 12, COLOR_BLACK, x, currentY + 12, gridWidth, headerHeight);
@@ -341,59 +352,96 @@ public class ImageRenderer {
                 currentMonth = cursor.getMonthValue();
             }
 
-            // Determine how many days to render in this row
-            // A row always represents Mon-Sun, but we only show days of the current month
-            LocalDate rowMonday = cursor.with(DayOfWeek.MONDAY);
-            int startCol = cursor.getDayOfWeek().getValue() - 1; // 0=Mon
+            // Track the top-left of this month's grid section
+            int sectionStartY = currentY;
+            int sectionRows = 0;
+            // Track which columns are occupied per row (for partial rows at month boundaries)
+            java.util.List<int[]> rowColRanges = new java.util.ArrayList<>();
 
-            // Draw cells for this row (only days belonging to current month and before endDate)
-            for (int col = startCol; col < 7; col++) {
-                LocalDate day = rowMonday.plusDays(col);
+            // Render all rows for this month
+            while (cursor.isBefore(endDate) && cursor.getMonthValue() == currentMonth) {
+                LocalDate rowMonday = cursor.with(DayOfWeek.MONDAY);
+                int startCol = cursor.getDayOfWeek().getValue() - 1; // 0=Mon
+                int endCol = startCol; // will track last occupied column (inclusive)
 
-                // Stop if we've gone past our 5-week window
-                if (!day.isBefore(endDate)) break;
+                // Draw cell content for this row (backgrounds, text)
+                for (int col = startCol; col < 7; col++) {
+                    LocalDate day = rowMonday.plusDays(col);
+                    if (!day.isBefore(endDate)) break;
+                    if (day.getMonthValue() != currentMonth) break;
 
-                // Stop if we've crossed into the next month (will be handled in next iteration)
-                if (day.getMonthValue() != currentMonth) break;
+                    int cellX = x + col * cellWidth;
+                    int cellY = currentY;
 
-                int cellX = x + col * cellWidth;
-                int cellY = currentY;
+                    // Weekend background: light dithered gray pattern
+                    if (col >= 5 && !day.equals(today)) {
+                        fillDitheredLight(graphics, cellX + 1, cellY + 1, cellWidth - 1, cellHeight - 1, COLOR_BLACK);
+                    }
 
-                // Weekend background: dithered gray pattern (checkerboard)
-                if (col >= 5 && !day.equals(today)) {
-                    fillDithered(graphics, cellX + 1, cellY + 1, cellWidth - 2, cellHeight - 2, COLOR_BLACK);
+                    // Highlight today: red dithered background, red text
+                    if (day.equals(today)) {
+                        fillDithered(graphics, cellX + 1, cellY + 1, cellWidth - 1, cellHeight - 1, COLOR_RED);
+                        FontHelper.drawString(graphics, String.valueOf(day.getDayOfMonth()), Aligment.CENTER, terminalBoldFont.get(), 12, COLOR_RED, cellX, cellY + (cellHeight / 2) + 6, cellWidth, cellHeight);
+                        todayCellX = cellX;
+                        todayCellY = cellY;
+                    } else {
+                        FontHelper.drawString(graphics, String.valueOf(day.getDayOfMonth()), Aligment.CENTER, terminalBoldFont.get(), 12, COLOR_BLACK, cellX, cellY + (cellHeight / 2) + 6, cellWidth, cellHeight);
+                    }
+
+                    endCol = col;
+                    cursor = day.plusDays(1);
                 }
 
-                // Highlight today: red border, red dithered background, red text
-                if (day.equals(today)) {
-                    fillDithered(graphics, cellX + 1, cellY + 1, cellWidth - 2, cellHeight - 2, COLOR_RED);
-                    graphics.setColor(COLOR_RED);
-                    graphics.drawRect(cellX, cellY, cellWidth - 1, cellHeight - 1);
-                    graphics.drawRect(cellX + 1, cellY + 1, cellWidth - 3, cellHeight - 3);
-                    FontHelper.drawString(graphics, String.valueOf(day.getDayOfMonth()), Aligment.CENTER, titleFont.get(), 12, COLOR_RED, cellX, cellY + (cellHeight / 2) + 6, cellWidth, cellHeight);
-                } else {
-                    Color textColor = (col >= 5) ? COLOR_RED : COLOR_BLACK;
-                    FontHelper.drawString(graphics, String.valueOf(day.getDayOfMonth()), Aligment.CENTER, terminalFont.get(), 12, textColor, cellX, cellY + (cellHeight / 2) + 6, cellWidth, cellHeight);
-                }
+                rowColRanges.add(new int[]{startCol, endCol});
+                currentY += cellHeight;
+                sectionRows++;
 
-                // Cell border
-                graphics.setColor(COLOR_BLACK);
-                graphics.drawRect(cellX, cellY, cellWidth - 1, cellHeight - 1);
-
-                cursor = day.plusDays(1);
-            }
-
-            currentY += cellHeight;
-
-            // If cursor is still in same month but we finished a row, advance cursor to next Monday
-            if (cursor.isBefore(endDate) && cursor.getMonthValue() == currentMonth) {
-                // cursor is already at the next day after last rendered, which should be next Monday
-                // unless month boundary: if cursor went past Sunday, it's already Monday
-                if (cursor.getDayOfWeek() != DayOfWeek.MONDAY) {
-                    // This shouldn't happen since we iterate full weeks, but safety
-                    cursor = cursor.with(DayOfWeek.MONDAY).plusWeeks(1);
+                // Advance cursor to next Monday if needed
+                if (cursor.isBefore(endDate) && cursor.getMonthValue() == currentMonth) {
+                    if (cursor.getDayOfWeek() != DayOfWeek.MONDAY) {
+                        cursor = cursor.with(DayOfWeek.MONDAY).plusWeeks(1);
+                    }
                 }
             }
+
+            // Draw grid lines only around occupied cells
+            graphics.setColor(COLOR_BLACK);
+            for (int row = 0; row < sectionRows; row++) {
+                int[] range = rowColRanges.get(row);
+                int firstCol = range[0];
+                int lastCol = range[1];
+                int rowY = sectionStartY + row * cellHeight;
+
+                // Draw individual cell borders for occupied cells
+                for (int col = firstCol; col <= lastCol; col++) {
+                    int cellX = x + col * cellWidth;
+                    int cellY = rowY;
+
+                    // Top edge
+                    graphics.drawLine(cellX, cellY, cellX + cellWidth, cellY);
+                    // Bottom edge
+                    graphics.drawLine(cellX, cellY + cellHeight, cellX + cellWidth, cellY + cellHeight);
+                    // Left edge (only for first occupied cell or if previous cell is unoccupied)
+                    if (col == firstCol) {
+                        graphics.drawLine(cellX, cellY, cellX, cellY + cellHeight);
+                    }
+                    // Right edge
+                    graphics.drawLine(cellX + cellWidth, cellY, cellX + cellWidth, cellY + cellHeight);
+                }
+            }
+        }
+
+        // Draw today's red border on top of the black grid lines (overwrites black with red)
+        if (todayCellX >= 0) {
+            graphics.setColor(COLOR_RED);
+            // Top edge
+            graphics.drawLine(todayCellX, todayCellY, todayCellX + cellWidth, todayCellY);
+            // Bottom edge
+            graphics.drawLine(todayCellX, todayCellY + cellHeight, todayCellX + cellWidth, todayCellY + cellHeight);
+            // Left edge
+            graphics.drawLine(todayCellX, todayCellY, todayCellX, todayCellY + cellHeight);
+            // Right edge
+            graphics.drawLine(todayCellX + cellWidth, todayCellY, todayCellX + cellWidth, todayCellY + cellHeight);
         }
     }
 
@@ -408,6 +456,21 @@ public class ImageRenderer {
         for (int py = y; py < y + height; py++) {
             for (int px = x; px < x + width; px++) {
                 if ((px + py) % 2 == 0) {
+                    graphics.fillRect(px, py, 1, 1);
+                }
+            }
+        }
+    }
+
+    /**
+     * Füllt einen Bereich mit einem leichten Raster-Pattern (~25% Dichte).
+     * Erzeugt auf dem e-ink Display einen helleren Grauton als fillDithered.
+     */
+    private void fillDitheredLight(Graphics2D graphics, int x, int y, int width, int height, Color color) {
+        graphics.setColor(color);
+        for (int py = y; py < y + height; py++) {
+            for (int px = x; px < x + width; px++) {
+                if ((px % 2 == 0) && (py % 2 == 0)) {
                     graphics.fillRect(px, py, 1, 1);
                 }
             }
