@@ -137,6 +137,11 @@ public class ImageRenderer {
         // Column header
         FontHelper.drawString(graphics, headerText, Aligment.RIGHT, titleFont.get(), 16, COLOR_BLACK, x, DAY_EVENTS_Y_START, width, 16);
 
+        if (events.isEmpty()) {
+            drawNoEventsPlaceholder(graphics, x, DAY_EVENTS_Y_START + 25, width);
+            return;
+        }
+
         int eventY = DAY_EVENTS_Y_START + 25;
 
         for (Event event : events) {
@@ -152,6 +157,44 @@ public class ImageRenderer {
                 eventY += 30;
             }
         }
+    }
+
+    /**
+     * Zeichnet einen großen Smiley und "Keine Termine" als Platzhalter,
+     * wenn an einem Tag keine Events vorhanden sind.
+     */
+    private void drawNoEventsPlaceholder(Graphics2D graphics, int x, int y, int width) {
+        // Smiley-Größe und Position (zentriert in der Spalte)
+        int smileyDiameter = 100;
+        int smileyX = x + (width - smileyDiameter) / 2;
+        int smileyY = y + 20;
+        int centerX = smileyX + smileyDiameter / 2;
+        int centerY = smileyY + smileyDiameter / 2;
+
+        // Kreis (Gesicht)
+        graphics.setColor(COLOR_BLACK);
+        Stroke oldStroke = graphics.getStroke();
+        graphics.setStroke(new BasicStroke(3));
+        graphics.drawOval(smileyX, smileyY, smileyDiameter, smileyDiameter);
+        graphics.setStroke(oldStroke);
+
+        // Augen (zwei gefüllte Kreise)
+        int eyeRadius = 6;
+        int eyeOffsetX = 18;
+        int eyeOffsetY = 15;
+        graphics.fillOval(centerX - eyeOffsetX - eyeRadius, centerY - eyeOffsetY - eyeRadius, eyeRadius * 2, eyeRadius * 2);
+        graphics.fillOval(centerX + eyeOffsetX - eyeRadius, centerY - eyeOffsetY - eyeRadius, eyeRadius * 2, eyeRadius * 2);
+
+        // Mund (Bogen nach oben = lächeln)
+        graphics.setStroke(new BasicStroke(3));
+        int mouthWidth = 50;
+        int mouthHeight = 30;
+        graphics.drawArc(centerX - mouthWidth / 2, centerY - 5, mouthWidth, mouthHeight, 200, 140);
+        graphics.setStroke(oldStroke);
+
+        // Text "Keine Termine" zentriert unterhalb des Smileys
+        int textY = smileyY + smileyDiameter + 30;
+        FontHelper.drawString(graphics, "Keine Termine", Aligment.CENTER, titleFont.get(), 18, COLOR_BLACK, x, textY, width, 20);
     }
 
     private boolean isAllDay(Event event) {

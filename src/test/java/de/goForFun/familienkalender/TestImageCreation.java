@@ -38,24 +38,8 @@ public class TestImageCreation {
                 // Timed Event mit Rot (Name) – roter Hintergrund im Frame
                 new Event(List.of("Anna Schmidt", "Andreas Neu", "Lena Müller"), now.withHour(18).withMinute(0), now.withHour(19).withMinute(0), "Familienessen", "red", EventSource.CALENDAR)
         );
-        List<Event> tomorrowEvents = List.of(
-                // Feiertag – schwarzer Rahmen
-                new Event(List.of(), now.plusDays(1).withHour(0).withMinute(0), now.plusDays(2).withHour(0).withMinute(0), "Allerheiligen", null, EventSource.HOLIDAY),
-                // Ganztägig mit Rot-Hex – roter Balken
-                new Event(List.of("Lena Müller"), now.plusDays(1).withHour(0).withMinute(0), now.plusDays(2).withHour(0).withMinute(0), "Klassenfahrt", "#FF0000", EventSource.CALENDAR),
-                // Schulkalender: Ganztägig – dunkelgrau gedithert
-                new Event(List.of(), now.plusDays(1).withHour(0).withMinute(0), now.plusDays(2).withHour(0).withMinute(0), "Schulfest", null, EventSource.SCHOOL),
-                // Ganztägig mit grüner Farbe – schwarzer Rahmen (kein Rot)
-                new Event(List.of("Anna Schmidt"), now.plusDays(1).withHour(0).withMinute(0), now.plusDays(2).withHour(0).withMinute(0), "Yoga-Kurs", "#00CC00", EventSource.CALENDAR),
-                // Schulkalender: Timed Event – dunkelgrau gedithert
-                new Event(List.of(), now.plusDays(1).withHour(8).withMinute(0), now.plusDays(1).withHour(9).withMinute(30), "Klassenfotos", null, EventSource.SCHOOL),
-                // Timed mit Rot
-                new Event(List.of("Andreas Neu"), now.plusDays(1).withHour(9).withMinute(0), now.plusDays(1).withHour(10).withMinute(0), "Deadline Projekt", "red", EventSource.CALENDAR),
-                // Timed ohne Farbe
-                new Event(List.of("Lena Müller", "Andreas Neu"), now.plusDays(1).withHour(14).withMinute(0), now.plusDays(1).withHour(15).withMinute(0), "Arzttermin", null, EventSource.CALENDAR),
-                // Timed ohne Farbe
-                new Event(List.of("Anna Schmidt", "Andreas Neu", "Lena Müller"), now.plusDays(1).withHour(19).withMinute(0), now.plusDays(1).withHour(20).withMinute(0), "Spieleabend", null, EventSource.CALENDAR)
-        );
+        // Morgen: keine Termine – zeigt Smiley mit "Keine Termine"
+        List<Event> tomorrowEvents = List.of();
         List<WeatherDay> weatherDays = List.of(
                 new WeatherDay("●", "-4 / -1"),
                 new WeatherDay("✻", "-6 / -1"),
