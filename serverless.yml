@@ -23,12 +23,15 @@ provider:
 package:
   artifact: target/Familienkalender-Server.jar
 
+custom:
+  updateIntervalMinutes: 360
+
 functions:
   FamilyWall-Kalender:
     handler: de.goForFun.familienkalender.CreateKalenderImage
     events:
       - eventBridge:
-          schedule: rate(6 hours)
+          schedule: rate(${self:custom.updateIntervalMinutes} minutes)
     environment:
       THUMBNAIL_SIZE: 100
       FONTCONFIG_CACHE: /tmp/.cache/fontconfig
@@ -45,3 +48,4 @@ functions:
       FONTCONFIG_CACHE: /tmp/.cache/fontconfig
       FONTCONFIG_PATH: /tmp/fontconfig
       API_SECRET: ${param:apiSecret}
+      UPDATE_INTERVAL_MINUTES: ${self:custom.updateIntervalMinutes}

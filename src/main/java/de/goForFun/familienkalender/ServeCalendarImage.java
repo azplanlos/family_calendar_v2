@@ -11,7 +11,10 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -33,6 +36,27 @@ public class ServeCalendarImage implements RequestHandler<APIGatewayV2HTTPEvent,
     private static final String S3_BUCKET = "familienkalender";
     private static final String S3_KEY_BIN = "calendar.bin";
 
+    /** Interval between image regenerations, from ENV (must match EventBridge schedule). */
+    private static final Duration UPDATE_INTERVAL = Duration.ofMinutes(
+            parseLongEnv("UPDATE_INTERVAL_MINUTES", 360)
+    );
+    /** Extra buffer so the device wakes up after the new image is ready. */
+    private static final Duration WAKE_BUFFER = Duration.ofMinutes(5);
+    /** Minimum sleep time to avoid busy-loop if something is off. */
+    private static final long MIN_SLEEP_SECONDS = 300; // 5 minutes
+
+    private static long parseLongEnv(String name, long defaultValue) {
+        String val = System.getenv(name);
+        if (val == null || val.isBlank()) {
+            return defaultValue;
+        }
+        try {
+            return Long.parseLong(val);
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
     @Override
     public APIGatewayV2HTTPResponse handleRequest(APIGatewayV2HTTPEvent event, Context context) {
         // Authenticate request
@@ -53,16 +77,29 @@ public class ServeCalendarImage implements RequestHandler<APIGatewayV2HTTPEvent,
                             .build()
             );
 
+            GetObjectResponse s3Response = objectBytes.response();
             String base64Body = Base64.getEncoder().encodeToString(objectBytes.asByteArray());
 
-            context.getLogger().log("Serving calendar.bin: " + objectBytes.asByteArray().length + " bytes");
+            // Calculate seconds until next expected image generation + buffer
+            Instant lastModified = s3Response.lastModified();
+            Instant nextUpdate = lastModified.plus(UPDATE_INTERVAL).plus(WAKE_BUFFER);
+            long sleepSeconds = Duration.between(Instant.now(), nextUpdate).getSeconds();
+            if (sleepSeconds < MIN_SLEEP_SECONDS) {
+                sleepSeconds = MIN_SLEEP_SECONDS;
+            }
+
+            context.getLogger().log("Serving calendar.bin: " + objectBytes.asByteArray().length + " bytes"
+                    + ", lastModified=" + lastModified
+                    + ", nextUpdateSleep=" + sleepSeconds + "s");
+
+            Map<String, String> headers = new HashMap<>();
+            headers.put("Content-Type", "application/octet-stream");
+            headers.put("Content-Length", String.valueOf(objectBytes.asByteArray().length));
+            headers.put("X-Next-Update-Seconds", String.valueOf(sleepSeconds));
 
             return APIGatewayV2HTTPResponse.builder()
                     .withStatusCode(200)
-                    .withHeaders(Map.of(
-                            "Content-Type", "application/octet-stream",
-                            "Content-Length", String.valueOf(objectBytes.asByteArray().length)
-                    ))
+                    .withHeaders(headers)
                     .withBody(base64Body)
                     .withIsBase64Encoded(true)
                     .build();

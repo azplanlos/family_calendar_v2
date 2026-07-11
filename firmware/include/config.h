@@ -80,6 +80,9 @@
 // Deep Sleep
 // ============================================================
 #define DEEP_SLEEP_ENABLED true
-#define DEEP_SLEEP_DURATION_US (UPDATE_INTERVAL_MIN * 60ULL * 1000000ULL)
+// DEEP_SLEEP_DURATION_US is no longer used directly.
+// The firmware now receives the sleep duration dynamically from the
+// backend via the X-Next-Update-Seconds response header.
+// UPDATE_INTERVAL_MIN serves as fallback if the header is missing.
 
 #endif // CONFIG_H

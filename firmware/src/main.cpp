@@ -44,6 +44,9 @@ static const uint32_t IMAGE_SIZE_RED = (DISPLAY_WIDTH * DISPLAY_HEIGHT) / 8;  //
 uint8_t* blackBuffer = nullptr;
 uint8_t* redBuffer = nullptr;
 
+// Deep sleep duration in seconds, updated from backend header
+uint64_t deepSleepSeconds = UPDATE_INTERVAL_MIN * 60ULL; // fallback
+
 // ============================================================
 // Forward Declarations
 // ============================================================
@@ -195,9 +198,24 @@ bool fetchImage() {
     http.setTimeout(30000);
     http.addHeader("Authorization", String("Bearer ") + cfg.apiSecret);
 
+    // Collect custom response header for dynamic sleep duration
+    const char* headersToCollect[] = {"X-Next-Update-Seconds"};
+    http.collectHeaders(headersToCollect, 1);
+
     int httpCode = http.GET();
 
     if (httpCode == HTTP_CODE_OK) {
+        // Read X-Next-Update-Seconds header for dynamic deep sleep
+        if (http.hasHeader("X-Next-Update-Seconds")) {
+            long headerVal = http.header("X-Next-Update-Seconds").toInt();
+            if (headerVal > 0) {
+                deepSleepSeconds = (uint64_t)headerVal;
+                Serial.printf("[HTTP] Next update in %llu seconds (from header)\n", deepSleepSeconds);
+            }
+        } else {
+            Serial.printf("[HTTP] No X-Next-Update-Seconds header, using fallback %llu s\n", deepSleepSeconds);
+        }
+
         int contentLength = http.getSize();
         Serial.printf("[HTTP] Response size: %d bytes\n", contentLength);
 
@@ -454,14 +472,16 @@ void handleConnectionError() {
 // Deep Sleep
 // ============================================================
 void enterDeepSleep() {
-    Serial.printf("[Sleep] Entering deep sleep for %d minutes...\n", UPDATE_INTERVAL_MIN);
+    uint64_t sleepMinutes = deepSleepSeconds / 60;
+    Serial.printf("[Sleep] Entering deep sleep for %llu minutes (%llu seconds)...\n", sleepMinutes, deepSleepSeconds);
     Serial.flush();
 
     // Free buffers before sleep
     if (blackBuffer) { free(blackBuffer); blackBuffer = nullptr; }
     if (redBuffer) { free(redBuffer); redBuffer = nullptr; }
 
-    esp_sleep_enable_timer_wakeup(DEEP_SLEEP_DURATION_US);
+    uint64_t sleepUs = deepSleepSeconds * 1000000ULL;
+    esp_sleep_enable_timer_wakeup(sleepUs);
     esp_deep_sleep_start();
 }
 
