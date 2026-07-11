@@ -53,7 +53,8 @@ uint64_t deepSleepSeconds = UPDATE_INTERVAL_MIN * 60ULL; // fallback
 bool connectWiFi();
 bool fetchImage();
 void showImage(int batteryPercent);
-void drawOverlay(int batteryPercent);
+void drawBatteryIntoBuffer(int batteryPercent);
+void drawFirmwareVersionIntoBuffer();
 void showErrorImage();
 void handleConnectionError();
 void enterDeepSleep();
@@ -113,7 +114,7 @@ void setup() {
 
     // Initialize display
     display.init(115200, true, 2, false);
-    display.setRotation(2); // 180° for GFX drawing operations (battery indicator etc.)
+    display.setRotation(2); // 180° for GFX drawing operations (error image)
 
     // Connect to WiFi and fetch image, then overlay battery indicator
     if (connectWiFi()) {
@@ -276,13 +277,14 @@ bool fetchImage() {
 void showImage(int batteryPercent) {
     Serial.println("[Display] Writing image to e-paper...");
 
-    // Write the backend image using writeImage with both planes
-    // writeImage sends black plane to command 0x10 and color plane to command 0x13
-    display.writeImage(blackBuffer, redBuffer, 0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, false, false, false);
+    // Draw battery indicator and firmware version directly into the buffers
+    // before sending to the display. This avoids partial window artifacts.
+    drawBatteryIntoBuffer(batteryPercent);
+    drawFirmwareVersionIntoBuffer();
 
-    // Overlay battery indicator and firmware version in bottom-left corner
-    // (bottom-left because the image is 180° rotated; in panel-RAM terms this is top-left)
-    drawOverlay(batteryPercent);
+    // Write the combined image (backend bitmap + overlays) as one full refresh
+    display.setFullWindow();
+    display.writeImage(blackBuffer, redBuffer, 0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, false, false, false);
 
     display.refresh();
     display.hibernate();
@@ -290,53 +292,199 @@ void showImage(int batteryPercent) {
 }
 
 // ============================================================
-// Overlay: Battery Indicator + Firmware Version
-// Drawn via paged drawing (firstPage/nextPage) into a partial window.
-// Uses GFX operations which respect setRotation(2).
+// Buffer Pixel Helpers
+// These draw directly into blackBuffer/redBuffer without using
+// the GxEPD2 partial window mechanism, avoiding transparency
+// artifacts and ensuring the full bitmap is sent in one refresh.
+//
+// Buffer layout: 1 bit per pixel, MSB first, row-major.
+// Pixel (x, y) is at byte offset (y * WIDTH + x) / 8, bit 7 - (x % 8).
+// A '0' bit = black/red (ink), '1' bit = white (no ink).
 // ============================================================
-void drawOverlay(int batteryPercent) {
-    // Overlay area (in rotated coordinates, i.e. top-left of the visible image)
-    const int16_t overlayX = 0;
-    const int16_t overlayY = 0;
-    const int16_t overlayW = 160; // wide enough for battery + text + version
-    const int16_t overlayH = 20;
 
-    // Battery icon dimensions
-    const int batX = 5;
-    const int batY = 5;
+inline void bufferSetPixel(uint8_t* buffer, int x, int y, bool ink) {
+    if (x < 0 || x >= DISPLAY_WIDTH || y < 0 || y >= DISPLAY_HEIGHT) return;
+    uint32_t byteIdx = (y * DISPLAY_WIDTH + x) / 8;
+    uint8_t bitMask = 0x80 >> (x % 8);
+    if (ink) {
+        buffer[byteIdx] &= ~bitMask; // 0 = ink on
+    } else {
+        buffer[byteIdx] |= bitMask;  // 1 = no ink
+    }
+}
+
+/// Clear a rectangular area to white in both planes
+void bufferClearRect(int rx, int ry, int rw, int rh) {
+    for (int py = ry; py < ry + rh; py++) {
+        for (int px = rx; px < rx + rw; px++) {
+            bufferSetPixel(blackBuffer, px, py, false);
+            bufferSetPixel(redBuffer, px, py, false);
+        }
+    }
+}
+
+/// Draw a filled rectangle in the specified plane
+void bufferFillRect(uint8_t* buffer, int rx, int ry, int rw, int rh) {
+    for (int py = ry; py < ry + rh; py++) {
+        for (int px = rx; px < rx + rw; px++) {
+            bufferSetPixel(buffer, px, py, true);
+        }
+    }
+}
+
+/// Draw a rectangle outline in the specified plane
+void bufferDrawRect(uint8_t* buffer, int rx, int ry, int rw, int rh) {
+    for (int px = rx; px < rx + rw; px++) {
+        bufferSetPixel(buffer, px, ry, true);
+        bufferSetPixel(buffer, px, ry + rh - 1, true);
+    }
+    for (int py = ry; py < ry + rh; py++) {
+        bufferSetPixel(buffer, rx, py, true);
+        bufferSetPixel(buffer, rx + rw - 1, py, true);
+    }
+}
+
+/// Draw a single character (built-in 5x7 font) into the buffer at (cx, cy).
+/// Returns the advance width (6 px per char).
+/// Minimal embedded 5x7 font for the characters we need in overlays.
+static const uint8_t PROGMEM miniFont[][5] = {
+    // Space (0x20)
+    {0x00, 0x00, 0x00, 0x00, 0x00},
+    // '.' (0x2E) - index will be computed
+    {0x00, 0x60, 0x60, 0x00, 0x00},
+    // '0'-'9' (0x30-0x39)
+    {0x3E, 0x51, 0x49, 0x45, 0x3E}, // 0
+    {0x00, 0x42, 0x7F, 0x40, 0x00}, // 1
+    {0x42, 0x61, 0x51, 0x49, 0x46}, // 2
+    {0x21, 0x41, 0x45, 0x4B, 0x31}, // 3
+    {0x18, 0x14, 0x12, 0x7F, 0x10}, // 4
+    {0x27, 0x45, 0x45, 0x45, 0x39}, // 5
+    {0x3C, 0x4A, 0x49, 0x49, 0x30}, // 6
+    {0x01, 0x71, 0x09, 0x05, 0x03}, // 7
+    {0x36, 0x49, 0x49, 0x49, 0x36}, // 8
+    {0x06, 0x49, 0x49, 0x29, 0x1E}, // 9
+    // '%' (0x25)
+    {0x23, 0x13, 0x08, 0x64, 0x62},
+    // 'F' (0x46)
+    {0x7F, 0x09, 0x09, 0x09, 0x01},
+    // 'W' (0x57)
+    {0x3F, 0x40, 0x38, 0x40, 0x3F},
+    // 'v' (0x76)
+    {0x1C, 0x20, 0x40, 0x20, 0x1C},
+    // '|' (0x7C)
+    {0x00, 0x00, 0x7F, 0x00, 0x00},
+};
+
+/// Map a character to its index in the miniFont table. Returns -1 if not found.
+int miniFontIndex(char c) {
+    if (c == ' ') return 0;
+    if (c == '.') return 1;
+    if (c >= '0' && c <= '9') return 2 + (c - '0');
+    if (c == '%') return 12;
+    if (c == 'F') return 13;
+    if (c == 'W') return 14;
+    if (c == 'v') return 15;
+    if (c == '|') return 16;
+    return -1;
+}
+
+int bufferDrawChar(uint8_t* buffer, int cx, int cy, char c) {
+    int idx = miniFontIndex(c);
+    if (idx < 0) return 6; // unsupported char, skip
+    for (int col = 0; col < 5; col++) {
+        uint8_t line = pgm_read_byte(&miniFont[idx][col]);
+        for (int row = 0; row < 7; row++) {
+            if (line & (1 << row)) {
+                bufferSetPixel(buffer, cx + col, cy + row, true);
+            }
+        }
+    }
+    return 6; // 5px glyph + 1px spacing
+}
+
+/// Draw a string into the buffer starting at (sx, sy)
+void bufferDrawString(uint8_t* buffer, int sx, int sy, const char* str) {
+    int x = sx;
+    while (*str) {
+        x += bufferDrawChar(buffer, x, sy, *str);
+        str++;
+    }
+}
+
+// ============================================================
+// Draw Battery Indicator into Buffer
+// Positioned at top-right of the visible image.
+// The backend image is pre-oriented for the physical panel, so
+// "top-right visible" = physical pixel (WIDTH - margin, 0 + margin).
+// ============================================================
+void drawBatteryIntoBuffer(int batteryPercent) {
+    // Position: top-right area of physical panel
     const int batW = 20;
     const int batH = 10;
     const int nippleW = 2;
     const int nippleH = 4;
+    const int margin = 5;
 
-    display.setPartialWindow(overlayX, overlayY, overlayW, overlayH);
-    display.firstPage();
-    do {
-        display.fillScreen(GxEPD_WHITE);
+    // Battery icon top-right corner (leave space for percentage text to the right)
+    // Layout: [battery icon][nipple] [percentage%]
+    // Total width estimate: batW + nippleW + 4 + 4*6(chars) ≈ 50px
+    int batX = DISPLAY_WIDTH - margin - 50;
+    int batY = margin;
 
-        // Draw battery outline (black)
-        display.drawRect(batX, batY, batW, batH, GxEPD_BLACK);
-        // Draw battery nipple (positive terminal)
-        display.fillRect(batX + batW, batY + (batH - nippleH) / 2, nippleW, nippleH, GxEPD_BLACK);
+    // Clear background area behind overlay (white)
+    bufferClearRect(batX - 2, batY - 2, 54, batH + 4);
 
-        // Fill level inside battery body
-        int fillW = (int)((batW - 4) * batteryPercent / 100.0f);
-        if (fillW > 0) {
-            uint16_t fillColor = (batteryPercent <= 20) ? GxEPD_RED : GxEPD_BLACK;
-            display.fillRect(batX + 2, batY + 2, fillW, batH - 4, fillColor);
+    // Draw battery outline (black plane)
+    bufferDrawRect(blackBuffer, batX, batY, batW, batH);
+
+    // Draw nipple (positive terminal)
+    bufferFillRect(blackBuffer, batX + batW, batY + (batH - nippleH) / 2, nippleW, nippleH);
+
+    // Fill level inside battery body
+    int fillW = (int)((batW - 4) * batteryPercent / 100.0f);
+    if (fillW > 0) {
+        if (batteryPercent <= 20) {
+            // Red fill for low battery
+            bufferFillRect(redBuffer, batX + 2, batY + 2, fillW, batH - 4);
+        } else {
+            // Black fill for normal battery
+            bufferFillRect(blackBuffer, batX + 2, batY + 2, fillW, batH - 4);
         }
+    }
 
-        // Draw percentage text next to battery icon
-        display.setTextColor(GxEPD_BLACK);
-        display.setFont(nullptr); // built-in 6x8 font (no anti-aliasing)
-        display.setCursor(batX + batW + nippleW + 4, batY + 1);
-        display.print(String(batteryPercent) + "%");
+    // Draw percentage text next to battery icon (black)
+    char percentStr[8];
+    snprintf(percentStr, sizeof(percentStr), "%d%%", batteryPercent);
+    int textX = batX + batW + nippleW + 4;
+    int textY = batY + 1;
+    bufferDrawString(blackBuffer, textX, textY, percentStr);
+}
 
-        // Draw firmware version after battery percentage
-        display.setCursor(batX + batW + nippleW + 4 + 30, batY + 1);
-        display.print("v" + String(FW_VERSION_STRING));
+// ============================================================
+// Draw Firmware Version into Buffer
+// Positioned at bottom-left, right after the backend version.
+// The backend renders its version at approximately x=10, y=HEIGHT-12
+// with ~10pt font. The firmware version is drawn after it with a
+// separator, using the small 5x7 built-in font at the very bottom.
+// ============================================================
+void drawFirmwareVersionIntoBuffer() {
+    // Position: bottom-left of physical panel, offset to the right
+    // to not overlap with the backend version text.
+    // Backend version "v1.2.3" takes about 60-80px with its 10pt font.
+    // We place firmware version starting at x=80 to leave space.
+    const int versionX = 80;
+    const int versionY = DISPLAY_HEIGHT - 10; // near bottom edge
 
-    } while (display.nextPage());
+    // Build version string: "| FW v0.0.0"
+    char fwStr[32];
+    snprintf(fwStr, sizeof(fwStr), "| FW v%s", FW_VERSION_STRING);
+
+    // Clear a small area behind the text (avoid blending with footer line)
+    int strLen = strlen(fwStr);
+    bufferClearRect(versionX, versionY - 1, strLen * 6 + 2, 9);
+
+    // Draw into black plane
+    bufferDrawString(blackBuffer, versionX, versionY, fwStr);
 }
 
 // ============================================================
