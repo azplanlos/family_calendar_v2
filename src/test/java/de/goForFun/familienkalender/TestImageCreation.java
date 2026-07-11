@@ -19,19 +19,33 @@ public class TestImageCreation {
         LocalDateTime now = LocalDateTime.now();
 
         List<Event> todayEvents = List.of(
+                // Feiertag (kein color) – schwarzer Rahmen
                 new Event(List.of(), now.withHour(0).withMinute(0), now.plusDays(1).withHour(0).withMinute(0), "Tag der Deutschen Einheit", null, EventSource.HOLIDAY),
-                new Event(List.of("Anna Schmidt"), now.withHour(0).withMinute(0), now.plusDays(1).withHour(0).withMinute(0), "Dummy-Ereignis", null, EventSource.CALENDAR),
-                new Event(List.of("Anna Schmidt"), now.withHour(20).withMinute(0), now.withHour(21).withMinute(0), "Vertical-core", null, EventSource.CALENDAR),
+                // Ganztägig mit rotem iCal-Color – roter Balken, schwarze Schrift
+                new Event(List.of("Anna Schmidt"), now.withHour(0).withMinute(0), now.plusDays(1).withHour(0).withMinute(0), "Urlaub Anna", "red", EventSource.CALENDAR),
+                // Ganztägig ohne Farbe – schwarzer Rahmen
+                new Event(List.of("Andreas Neu"), now.withHour(0).withMinute(0), now.plusDays(1).withHour(0).withMinute(0), "Homeoffice", null, EventSource.CALENDAR),
+                // Timed Event mit Rot (Hex) – roter Hintergrund im Frame
+                new Event(List.of("Anna Schmidt"), now.withHour(14).withMinute(0), now.withHour(15).withMinute(0), "Arzt (wichtig!)", "#CC0000", EventSource.CALENDAR),
+                // Timed Event ohne Farbe – normaler schwarzer Rahmen
                 new Event(List.of("Andreas Neu"), now.withHour(20).withMinute(0), now.withHour(22).withMinute(0), "Montagsturnier", null, EventSource.CALENDAR),
-                new Event(List.of("Anna Schmidt", "Andreas Neu"), now.withHour(16).withMinute(30), now.withHour(17).withMinute(30), "Elternabend", null, EventSource.CALENDAR),
-                new Event(List.of("Anna Schmidt", "Andreas Neu", "Lena Müller"), now.withHour(18).withMinute(0), now.withHour(19).withMinute(0), "Familienessen", null, EventSource.CALENDAR)
+                // Timed Event mit blauer Farbe – wird wie normal (kein Rot) gerendert
+                new Event(List.of("Anna Schmidt", "Andreas Neu"), now.withHour(16).withMinute(30), now.withHour(17).withMinute(30), "Elternabend", "#0000FF", EventSource.CALENDAR),
+                // Timed Event mit Rot (Name) – roter Hintergrund im Frame
+                new Event(List.of("Anna Schmidt", "Andreas Neu", "Lena Müller"), now.withHour(18).withMinute(0), now.withHour(19).withMinute(0), "Familienessen", "red", EventSource.CALENDAR)
         );
         List<Event> tomorrowEvents = List.of(
+                // Feiertag – schwarzer Rahmen
                 new Event(List.of(), now.plusDays(1).withHour(0).withMinute(0), now.plusDays(2).withHour(0).withMinute(0), "Allerheiligen", null, EventSource.HOLIDAY),
-                new Event(List.of("Anna Schmidt"), now.plusDays(1).withHour(0).withMinute(0), now.plusDays(2).withHour(0).withMinute(0), "Dummy-Ereignis", null, EventSource.CALENDAR),
-                new Event(List.of("Anna Schmidt"), now.plusDays(1).withHour(20).withMinute(0), now.plusDays(1).withHour(21).withMinute(0), "Vertical-core", null, EventSource.CALENDAR),
-                new Event(List.of("Andreas Neu"), now.plusDays(1).withHour(20).withMinute(0), now.plusDays(1).withHour(22).withMinute(0), "Montagsturnier", null, EventSource.CALENDAR),
+                // Ganztägig mit Rot-Hex – roter Balken
+                new Event(List.of("Lena Müller"), now.plusDays(1).withHour(0).withMinute(0), now.plusDays(2).withHour(0).withMinute(0), "Klassenfahrt", "#FF0000", EventSource.CALENDAR),
+                // Ganztägig mit grüner Farbe – schwarzer Rahmen (kein Rot)
+                new Event(List.of("Anna Schmidt"), now.plusDays(1).withHour(0).withMinute(0), now.plusDays(2).withHour(0).withMinute(0), "Yoga-Kurs", "#00CC00", EventSource.CALENDAR),
+                // Timed mit Rot
+                new Event(List.of("Andreas Neu"), now.plusDays(1).withHour(9).withMinute(0), now.plusDays(1).withHour(10).withMinute(0), "Deadline Projekt", "red", EventSource.CALENDAR),
+                // Timed ohne Farbe
                 new Event(List.of("Lena Müller", "Andreas Neu"), now.plusDays(1).withHour(14).withMinute(0), now.plusDays(1).withHour(15).withMinute(0), "Arzttermin", null, EventSource.CALENDAR),
+                // Timed ohne Farbe
                 new Event(List.of("Anna Schmidt", "Andreas Neu", "Lena Müller"), now.plusDays(1).withHour(19).withMinute(0), now.plusDays(1).withHour(20).withMinute(0), "Spieleabend", null, EventSource.CALENDAR)
         );
         List<WeatherDay> weatherDays = List.of(

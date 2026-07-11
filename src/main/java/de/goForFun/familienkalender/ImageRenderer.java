@@ -132,14 +132,14 @@ public class ImageRenderer {
 
         for (Event event : events) {
             if (isAllDay(event)) {
-                drawAllDayEvent(graphics, event.summary(), x, eventY, width);
+                drawAllDayEvent(graphics, event, x, eventY, width);
                 eventY += 30;
             } else {
                 String time = event.startTime() != null
                         ? event.startTime().format(DateTimeFormatter.ofPattern("HH:mm"))
                         : "";
                 List<String> participants = event.participants() != null ? event.participants() : List.of();
-                drawTimedEvent(graphics, time, participants, event.summary(), x, eventY, width);
+                drawTimedEvent(graphics, time, participants, event.summary(), event.color(), x, eventY, width);
                 eventY += 30;
             }
         }
@@ -165,22 +165,61 @@ public class ImageRenderer {
         return name.substring(0, Math.min(2, name.length())).toUpperCase();
     }
 
-    private void drawAllDayEvent(Graphics2D graphics, String title, int x, int y, int width) {
-        // Red background box
-        graphics.setColor(COLOR_RED);
-        graphics.fillRect(x, y, width, 25);
-
-        // White text on red background
-        FontHelper.drawString(graphics, title, Aligment.CENTER, titleFont.get(), 13, COLOR_WHITE, x, y + 17, width, 25);
+    /**
+     * Prüft ob die iCal-Farbe eines Events als "rot" zu interpretieren ist.
+     * Erkennt den Farbnamen "red" (case-insensitive) sowie gängige Rot-Hex-Codes.
+     */
+    private boolean isRedColor(String color) {
+        if (color == null || color.isBlank()) {
+            return false;
+        }
+        String normalized = color.trim().toLowerCase(Locale.ROOT);
+        if (normalized.equals("red")) {
+            return true;
+        }
+        // Hex-Codes: Rot-Dominanz über 40%-Regel
+        if (normalized.startsWith("#") && normalized.length() >= 7) {
+            try {
+                int r = Integer.parseInt(normalized.substring(1, 3), 16);
+                int g = Integer.parseInt(normalized.substring(3, 5), 16);
+                int b = Integer.parseInt(normalized.substring(5, 7), 16);
+                // R muss mindestens 80 sein (sonst fast-schwarz) und G/B dürfen
+                // maximal 40% von R betragen – erkennt auch dunkle Rottöne sicher,
+                // schließt aber Orange (#FF8C00) und ähnliche aus.
+                return r >= 80 && g < (r * 0.4) && b < (r * 0.4);
+            } catch (NumberFormatException e) {
+                return false;
+            }
+        }
+        return false;
     }
 
-    private void drawTimedEvent(Graphics2D graphics, String time, List<String> participants, String title, int x, int y, int width) {
+    private void drawAllDayEvent(Graphics2D graphics, Event event, int x, int y, int width) {
+        String title = event.summary();
+        if (isRedColor(event.color())) {
+            // Rot-markiertes Event: roter Hintergrund, schwarze Schrift
+            graphics.setColor(COLOR_RED);
+            graphics.fillRect(x, y, width, 25);
+            FontHelper.drawString(graphics, title, Aligment.CENTER, titleFont.get(), 13, COLOR_BLACK, x, y + 17, width, 25);
+        } else {
+            // Andere Events: schwarzer Rahmen, schwarze Schrift auf weißem Grund
+            graphics.setColor(COLOR_WHITE);
+            graphics.fillRect(x, y, width, 25);
+            graphics.setColor(COLOR_BLACK);
+            graphics.drawRect(x, y, width, 25);
+            FontHelper.drawString(graphics, title, Aligment.CENTER, titleFont.get(), 13, COLOR_BLACK, x, y + 17, width, 25);
+        }
+    }
+
+    private void drawTimedEvent(Graphics2D graphics, String time, List<String> participants, String title, String color, int x, int y, int width) {
         int badgeDiameter = 24;
         int badgeOverlap = 8; // Überlappung in Pixel
         int timeWidth = 50;
+        boolean isRed = isRedColor(color);
 
-        // Time
-        FontHelper.drawString(graphics, time, Aligment.LEFT, terminalFont.get(), 13, COLOR_BLACK, x, y + 17, timeWidth, 15);
+        // Time (rot bei rot-markierten Events)
+        Color timeColor = isRed ? COLOR_RED : COLOR_BLACK;
+        FontHelper.drawString(graphics, time, Aligment.LEFT, terminalFont.get(), 13, timeColor, x, y + 17, timeWidth, 15);
 
         // Draw badges for each participant (overlapping, last on top)
         int firstBadgeX = x + timeWidth + 1;
@@ -207,8 +246,15 @@ public class ImageRenderer {
         int frameWidth = frameRightX - frameLeftX;
 
         // Draw frame first (behind badges)
-        graphics.setColor(COLOR_BLACK);
-        graphics.drawRect(frameLeftX, frameY, frameWidth, frameHeight);
+        if (isRed) {
+            // Rot-markiertes Event: roter Hintergrund im Frame-Bereich
+            graphics.setColor(COLOR_RED);
+            graphics.fillRect(frameLeftX, frameY, frameWidth, frameHeight);
+        } else {
+            // Normales Event: schwarzer Rahmen auf weißem Grund
+            graphics.setColor(COLOR_BLACK);
+            graphics.drawRect(frameLeftX, frameY, frameWidth, frameHeight);
+        }
 
         // Draw badges on top of frame (overlapping each other)
         badgeX = firstBadgeX;
@@ -216,7 +262,7 @@ public class ImageRenderer {
             String initials = getInitials(participant);
             if (initials.isEmpty()) continue;
 
-            // Circle badge
+            // Circle badge (immer schwarz, unabhängig von Event-Farbe)
             graphics.setColor(COLOR_BLACK);
             graphics.fillOval(badgeX, badgeY, badgeDiameter, badgeDiameter);
 
