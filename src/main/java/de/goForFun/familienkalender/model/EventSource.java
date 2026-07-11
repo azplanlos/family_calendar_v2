@@ -7,5 +7,7 @@ public enum EventSource {
     /** Event aus einem iCal-Feed */
     CALENDAR,
     /** Gesetzlicher Feiertag */
-    HOLIDAY
+    HOLIDAY,
+    /** Event aus dem Schulkalender */
+    SCHOOL
 }

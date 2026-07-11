@@ -1,0 +1,87 @@
+BEGIN:VCALENDAR
+PRODID:-//testschool//schulportal//DE
+VERSION:2.0
+CALSCALE:GREGORIAN
+NAME:Schulportal
+X-WR-CALNAME:Schulportal
+BEGIN:VEVENT
+UID:school-event-1001@schulportal.example
+DTSTAMP:20260711T120000Z
+SUMMARY:Pausenverkauf Klasse 2b
+DESCRIPTION:Organisiert durch den Elternbeirat
+URL:https://schulportal.example/calendar/events/1001
+DTSTART;TZID=Europe/Berlin:20260711T093000
+DTEND;TZID=Europe/Berlin:20260711T095000
+CATEGORIES:Feste und Feiern
+END:VEVENT
+BEGIN:VEVENT
+UID:school-event-1002@schulportal.example
+DTSTAMP:20260711T120000Z
+SUMMARY:Bundesjugendspiele
+DESCRIPTION:Alle Klassen nehmen teil
+URL:https://schulportal.example/calendar/events/1002
+DTSTART;TZID=Europe/Berlin:20260711T080000
+DTEND;TZID=Europe/Berlin:20260711T113000
+CATEGORIES:Sportveranstaltung
+END:VEVENT
+BEGIN:VEVENT
+UID:school-event-1003@schulportal.example
+DTSTAMP:20260711T120000Z
+SUMMARY:Schulfest
+DESCRIPTION:Sommerfest mit Aufführungen und Spielen
+URL:https://schulportal.example/calendar/events/1003
+DTSTART;TZID=Europe/Berlin:20260712T160000
+DTEND;TZID=Europe/Berlin:20260712T180000
+CATEGORIES:Feste und Feiern
+END:VEVENT
+BEGIN:VEVENT
+UID:school-event-1004@schulportal.example
+DTSTAMP:20260711T120000Z
+SUMMARY:Klassenfotos
+DESCRIPTION:Fotografin kommt in die Schule
+URL:https://schulportal.example/calendar/events/1004
+DTSTART;TZID=Europe/Berlin:20260712T080000
+DTEND;TZID=Europe/Berlin:20260712T093000
+CATEGORIES:Sonstiges
+END:VEVENT
+BEGIN:VEVENT
+UID:school-event-1005@schulportal.example
+DTSTAMP:20260711T120000Z
+SUMMARY:Sponsorenlauf Förderverein
+DESCRIPTION:1. Klassen 8:30-9:00 Uhr; 2. Klassen 9:00-9:30 Uhr; 3. Klassen 10:00-10:30 Uhr
+URL:https://schulportal.example/calendar/events/1005
+DTSTART;TZID=Europe/Berlin:20260715T083000
+DTEND;TZID=Europe/Berlin:20260715T110000
+CATEGORIES:Sportveranstaltung
+END:VEVENT
+BEGIN:VEVENT
+UID:school-event-1006@schulportal.example
+DTSTAMP:20260711T120000Z
+SUMMARY:Letzter Schultag - Jahreszeugnis
+DESCRIPTION:Unterrichtsschluss 10:35 Uhr
+URL:https://schulportal.example/calendar/events/1006
+DTSTART;TZID=Europe/Berlin:20260731T080000
+DTEND;TZID=Europe/Berlin:20260731T103500
+CATEGORIES:Sonstiges
+END:VEVENT
+BEGIN:VEVENT
+UID:school-event-1007@schulportal.example
+DTSTAMP:20260711T120000Z
+SUMMARY:Abschluss-Gottesdienst
+DESCRIPTION:In der Schulaula
+URL:https://schulportal.example/calendar/events/1007
+DTSTART;TZID=Europe/Berlin:20260730T083000
+DTEND;TZID=Europe/Berlin:20260730T093000
+CATEGORIES:Feste und Feiern
+END:VEVENT
+BEGIN:VEVENT
+UID:school-event-1008@schulportal.example
+DTSTAMP:20260711T120000Z
+SUMMARY:Stadtrundgang Klasse 3a
+DESCRIPTION:Treffpunkt am Schultor
+URL:https://schulportal.example/calendar/events/1008
+DTSTART;TZID=Europe/Berlin:20260711T080000
+DTEND;TZID=Europe/Berlin:20260711T120000
+CATEGORIES:Ausflüge
+END:VEVENT
+END:VCALENDAR

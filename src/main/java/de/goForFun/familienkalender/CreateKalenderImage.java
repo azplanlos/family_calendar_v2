@@ -31,6 +31,7 @@ public class CreateKalenderImage implements RequestHandler<ScheduledEvent, Void>
 
     private static final String AWS_REGION = System.getenv("AWS_REGION");
     private static final String CALENDAR_FEED = System.getenv("CALENDAR_FEED");
+    private static final String SCHOOL_CALENDAR_FEED = System.getenv("SCHOOL_CALENDAR_FEED");
     private static final String HOLIDAY_COUNTRY = System.getenv("HOLIDAY_COUNTRY") != null
             ? System.getenv("HOLIDAY_COUNTRY") : "de";
     private static final String HOLIDAY_STATE = System.getenv("HOLIDAY_STATE") != null
@@ -52,8 +53,10 @@ public class CreateKalenderImage implements RequestHandler<ScheduledEvent, Void>
             LocalDateTime now = LocalDateTime.now();
             LocalDate today = now.toLocalDate();
 
-            // EventRepository sammelt iCal-Events und Feiertage zentral
-            EventRepository eventRepository = new EventRepository(URI.create(CALENDAR_FEED), today, holidayProvider);
+            // EventRepository sammelt iCal-Events, Schulkalender und Feiertage zentral
+            URI schoolFeedUri = SCHOOL_CALENDAR_FEED != null && !SCHOOL_CALENDAR_FEED.isBlank()
+                    ? URI.create(SCHOOL_CALENDAR_FEED) : null;
+            EventRepository eventRepository = new EventRepository(URI.create(CALENDAR_FEED), schoolFeedUri, today, holidayProvider);
             List<Event> todayEvents = eventRepository.getEventsForDay(today);
             List<Event> tomorrowEvents = eventRepository.getEventsForDay(today.plusDays(1));
 

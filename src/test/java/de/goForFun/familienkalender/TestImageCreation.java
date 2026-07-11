@@ -25,8 +25,12 @@ public class TestImageCreation {
                 new Event(List.of("Anna Schmidt"), now.withHour(0).withMinute(0), now.plusDays(1).withHour(0).withMinute(0), "Urlaub Anna", "red", EventSource.CALENDAR),
                 // Ganztägig ohne Farbe – schwarzer Rahmen
                 new Event(List.of("Andreas Neu"), now.withHour(0).withMinute(0), now.plusDays(1).withHour(0).withMinute(0), "Homeoffice", null, EventSource.CALENDAR),
+                // Schulkalender: Timed Event – dunkelgrau gedithert
+                new Event(List.of(), now.withHour(8).withMinute(0), now.withHour(11).withMinute(30), "Bundesjugendspiele", null, EventSource.SCHOOL),
                 // Timed Event mit Rot (Hex) – roter Hintergrund im Frame
                 new Event(List.of("Anna Schmidt"), now.withHour(14).withMinute(0), now.withHour(15).withMinute(0), "Arzt (wichtig!)", "#CC0000", EventSource.CALENDAR),
+                // Schulkalender: Timed Event – dunkelgrau gedithert
+                new Event(List.of(), now.withHour(9).withMinute(30), now.withHour(9).withMinute(50), "Pausenverkauf 2b", null, EventSource.SCHOOL),
                 // Timed Event ohne Farbe – normaler schwarzer Rahmen
                 new Event(List.of("Andreas Neu"), now.withHour(20).withMinute(0), now.withHour(22).withMinute(0), "Montagsturnier", null, EventSource.CALENDAR),
                 // Timed Event mit blauer Farbe – wird wie normal (kein Rot) gerendert
@@ -39,8 +43,12 @@ public class TestImageCreation {
                 new Event(List.of(), now.plusDays(1).withHour(0).withMinute(0), now.plusDays(2).withHour(0).withMinute(0), "Allerheiligen", null, EventSource.HOLIDAY),
                 // Ganztägig mit Rot-Hex – roter Balken
                 new Event(List.of("Lena Müller"), now.plusDays(1).withHour(0).withMinute(0), now.plusDays(2).withHour(0).withMinute(0), "Klassenfahrt", "#FF0000", EventSource.CALENDAR),
+                // Schulkalender: Ganztägig – dunkelgrau gedithert
+                new Event(List.of(), now.plusDays(1).withHour(0).withMinute(0), now.plusDays(2).withHour(0).withMinute(0), "Schulfest", null, EventSource.SCHOOL),
                 // Ganztägig mit grüner Farbe – schwarzer Rahmen (kein Rot)
                 new Event(List.of("Anna Schmidt"), now.plusDays(1).withHour(0).withMinute(0), now.plusDays(2).withHour(0).withMinute(0), "Yoga-Kurs", "#00CC00", EventSource.CALENDAR),
+                // Schulkalender: Timed Event – dunkelgrau gedithert
+                new Event(List.of(), now.plusDays(1).withHour(8).withMinute(0), now.plusDays(1).withHour(9).withMinute(30), "Klassenfotos", null, EventSource.SCHOOL),
                 // Timed mit Rot
                 new Event(List.of("Andreas Neu"), now.plusDays(1).withHour(9).withMinute(0), now.plusDays(1).withHour(10).withMinute(0), "Deadline Projekt", "red", EventSource.CALENDAR),
                 // Timed ohne Farbe

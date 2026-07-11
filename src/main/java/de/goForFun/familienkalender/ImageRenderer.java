@@ -2,6 +2,7 @@ package de.goForFun.familienkalender;
 
 import com.google.common.base.Suppliers;
 import de.goForFun.familienkalender.model.Event;
+import de.goForFun.familienkalender.model.EventSource;
 import de.goForFun.familienkalender.model.RenderData;
 import de.goForFun.familienkalender.model.WeatherDay;
 
@@ -147,7 +148,7 @@ public class ImageRenderer {
                         ? event.startTime().format(DateTimeFormatter.ofPattern("HH:mm"))
                         : "";
                 List<String> participants = event.participants() != null ? event.participants() : List.of();
-                drawTimedEvent(graphics, time, participants, event.summary(), event.color(), x, eventY, width);
+                drawTimedEvent(graphics, time, participants, event.summary(), event.color(), event.source(), x, eventY, width);
                 eventY += 30;
             }
         }
@@ -204,7 +205,15 @@ public class ImageRenderer {
 
     private void drawAllDayEvent(Graphics2D graphics, Event event, int x, int y, int width) {
         String title = event.summary();
-        if (isRedColor(event.color())) {
+        if (event.source() == EventSource.SCHOOL) {
+            // Schulkalender-Event: dunkelgrau gedithert (50% schwarz), schwarze Schrift
+            graphics.setColor(COLOR_WHITE);
+            graphics.fillRect(x, y, width, 25);
+            fillDithered(graphics, x, y, width, 25, COLOR_BLACK);
+            graphics.setColor(COLOR_BLACK);
+            graphics.drawRect(x, y, width, 25);
+            FontHelper.drawString(graphics, title, Aligment.CENTER, titleFont.get(), 13, COLOR_WHITE, x, y + 17, width, 25);
+        } else if (isRedColor(event.color())) {
             // Rot-markiertes Event: roter Hintergrund, schwarze Schrift
             graphics.setColor(COLOR_RED);
             graphics.fillRect(x, y, width, 25);
@@ -219,11 +228,12 @@ public class ImageRenderer {
         }
     }
 
-    private void drawTimedEvent(Graphics2D graphics, String time, List<String> participants, String title, String color, int x, int y, int width) {
+    private void drawTimedEvent(Graphics2D graphics, String time, List<String> participants, String title, String color, EventSource source, int x, int y, int width) {
         int badgeDiameter = 24;
         int badgeOverlap = 8; // Überlappung in Pixel
         int timeWidth = 50;
         boolean isRed = isRedColor(color);
+        boolean isSchool = source == EventSource.SCHOOL;
 
         // Time (rot bei rot-markierten Events)
         Color timeColor = isRed ? COLOR_RED : COLOR_BLACK;
@@ -238,6 +248,9 @@ public class ImageRenderer {
 
         // Calculate where the last badge ends
         int badgeCount = 0;
+        if (isSchool) {
+            badgeCount++; // Schul-Badge zählt als erstes Badge
+        }
         for (String participant : participants) {
             if (getInitials(participant).isEmpty()) continue;
             badgeCount++;
@@ -257,7 +270,14 @@ public class ImageRenderer {
         int frameWidth = frameRightX - frameLeftX;
 
         // Draw frame first (behind badges)
-        if (isRed) {
+        if (isSchool) {
+            // Schulkalender-Event: dunkelgrau gedithert (50% schwarz) im Frame-Bereich
+            graphics.setColor(COLOR_WHITE);
+            graphics.fillRect(frameLeftX, frameY, frameWidth, frameHeight);
+            fillDithered(graphics, frameLeftX, frameY, frameWidth, frameHeight, COLOR_BLACK);
+            graphics.setColor(COLOR_BLACK);
+            graphics.drawRect(frameLeftX, frameY, frameWidth, frameHeight);
+        } else if (isRed) {
             // Rot-markiertes Event: roter Hintergrund im Frame-Bereich
             graphics.setColor(COLOR_RED);
             graphics.fillRect(frameLeftX, frameY, frameWidth, frameHeight);
@@ -269,6 +289,11 @@ public class ImageRenderer {
 
         // Draw badges on top of frame (overlapping each other)
         badgeX = firstBadgeX;
+        if (isSchool) {
+            // Schulkalender-Badge: weißer Kreis mit schwarzem Rand + Schul-Icon
+            drawSchoolBadge(graphics, badgeX, badgeY, badgeDiameter);
+            badgeX += badgeDiameter - badgeOverlap;
+        }
         for (String participant : participants) {
             String initials = getInitials(participant);
             if (initials.isEmpty()) continue;
@@ -292,8 +317,51 @@ public class ImageRenderer {
 
         // Event title inside the frame (after last badge)
         if (titleWidth > 0) {
-            FontHelper.drawString(graphics, title, Aligment.LEFT, terminalFont.get(), 13, COLOR_BLACK, titleX + 4, frameY + 16, titleWidth - 8, frameHeight);
+            Color titleColor = isSchool ? COLOR_WHITE : COLOR_BLACK;
+            FontHelper.drawString(graphics, title, Aligment.LEFT, terminalFont.get(), 13, titleColor, titleX + 4, frameY + 16, titleWidth - 8, frameHeight);
         }
+    }
+
+    // ========== SCHOOL BADGE ==========
+
+    /**
+     * Zeichnet eine Schul-Badge: weißer Kreis mit schwarzem Rand und einem kleinen
+     * aufgeschlagenen Buch-Icon in der Mitte.
+     */
+    private void drawSchoolBadge(Graphics2D graphics, int bx, int by, int diameter) {
+        // Weißer Kreis als Hintergrund
+        graphics.setColor(COLOR_WHITE);
+        graphics.fillOval(bx, by, diameter, diameter);
+        // Schwarzer Rand – 2px breit für durchgehende Linie auf e-ink
+        graphics.setColor(COLOR_BLACK);
+        Stroke oldStroke = graphics.getStroke();
+        graphics.setStroke(new BasicStroke(2));
+        graphics.drawOval(bx + 1, by + 1, diameter - 2, diameter - 2);
+        graphics.setStroke(oldStroke);
+
+        // Offenes Buch-Icon zentriert im Badge (ca. 14x10 px)
+        int cx = bx + diameter / 2; // Mitte des Badges
+        int cy = by + diameter / 2;
+
+        // Buchrücken (vertikale Linie in der Mitte)
+        graphics.setColor(COLOR_BLACK);
+        graphics.drawLine(cx, cy - 4, cx, cy + 4);
+
+        // Linke Buchseite (leicht nach links geneigtes Trapez)
+        int[] leftX = {cx - 1, cx - 6, cx - 6, cx - 1};
+        int[] leftY = {cy - 4, cy - 3, cy + 3, cy + 4};
+        graphics.drawPolygon(leftX, leftY, 4);
+
+        // Rechte Buchseite (leicht nach rechts geneigtes Trapez)
+        int[] rightX = {cx + 1, cx + 6, cx + 6, cx + 1};
+        int[] rightY = {cy - 4, cy - 3, cy + 3, cy + 4};
+        graphics.drawPolygon(rightX, rightY, 4);
+
+        // "Zeilen" auf den Seiten (je 2 kurze Striche)
+        graphics.drawLine(cx - 5, cy - 1, cx - 2, cy - 1);
+        graphics.drawLine(cx - 5, cy + 1, cx - 2, cy + 1);
+        graphics.drawLine(cx + 2, cy - 1, cx + 5, cy - 1);
+        graphics.drawLine(cx + 2, cy + 1, cx + 5, cy + 1);
     }
 
     // ========== WEATHER FORECAST ==========

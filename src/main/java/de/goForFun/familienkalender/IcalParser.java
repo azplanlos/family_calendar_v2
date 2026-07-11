@@ -29,16 +29,38 @@ public class IcalParser {
      * Lädt den iCal-Feed von einer URI und parst alle Events im Monat des Referenzdatums.
      */
     public List<Event> parse(URI feedUri, YearMonth month) throws IOException, ParserException {
+        return parse(feedUri, month, EventSource.CALENDAR);
+    }
+
+    /**
+     * Lädt den iCal-Feed von einer URI und parst alle Events im Monat des Referenzdatums.
+     *
+     * @param feedUri URI des iCal-Feeds
+     * @param month   der zu ladende Monat
+     * @param source  die EventSource, die den geparsten Events zugewiesen wird
+     */
+    public List<Event> parse(URI feedUri, YearMonth month, EventSource source) throws IOException, ParserException {
         try (InputStream inputStream = feedUri.toURL().openStream()) {
-            return parse(inputStream, month);
+            return parse(inputStream, month, source);
         }
     }
 
     /**
      * Parst einen iCal-InputStream und expandiert alle Events im angegebenen Monat.
      */
-    @SuppressWarnings("unchecked")
     public List<Event> parse(InputStream inputStream, YearMonth month) throws IOException, ParserException {
+        return parse(inputStream, month, EventSource.CALENDAR);
+    }
+
+    /**
+     * Parst einen iCal-InputStream und expandiert alle Events im angegebenen Monat.
+     *
+     * @param inputStream InputStream mit iCal-Daten
+     * @param month       der zu ladende Monat
+     * @param source      die EventSource, die den geparsten Events zugewiesen wird
+     */
+    @SuppressWarnings("unchecked")
+    public List<Event> parse(InputStream inputStream, YearMonth month, EventSource source) throws IOException, ParserException {
         CalendarBuilder builder = new CalendarBuilder();
         Calendar calendar = builder.build(inputStream);
 
@@ -82,7 +104,7 @@ public class IcalParser {
                         occurrenceEnd,
                         baseEvent.summary(),
                         baseEvent.color(),
-                        EventSource.CALENDAR
+                        source
                 ));
             }
         }

@@ -1,6 +1,7 @@
 package de.goForFun.familienkalender;
 
 import de.goForFun.familienkalender.model.Event;
+import de.goForFun.familienkalender.model.EventSource;
 import net.fortuna.ical4j.data.ParserException;
 
 import java.io.IOException;
@@ -10,7 +11,7 @@ import java.time.*;
 import java.util.*;
 
 /**
- * Zentrale Event-Verwaltung: Sammelt Events aus verschiedenen Quellen (iCal-Feed, Feiertage)
+ * Zentrale Event-Verwaltung: Sammelt Events aus verschiedenen Quellen (iCal-Feed, Schulkalender, Feiertage)
  * und bietet Filterung nach Tag oder Zeitraum.
  */
 public class EventRepository {
@@ -25,9 +26,24 @@ public class EventRepository {
      * @param holidayProvider optionaler HolidayProvider (kann null sein)
      */
     public EventRepository(URI feedUri, LocalDate referenceDate, HolidayProvider holidayProvider) throws IOException, ParserException {
+        this(feedUri, null, referenceDate, holidayProvider);
+    }
+
+    /**
+     * Erstellt ein EventRepository aus einem iCal-Feed, einem optionalen Schulkalender-Feed und optionalem HolidayProvider.
+     *
+     * @param feedUri             URI des Familien-iCal-Feeds
+     * @param schoolFeedUri       URI des Schulkalender-Feeds (kann null sein)
+     * @param referenceDate       Referenzdatum – der Monat dieses Datums wird geladen
+     * @param holidayProvider     optionaler HolidayProvider (kann null sein)
+     */
+    public EventRepository(URI feedUri, URI schoolFeedUri, LocalDate referenceDate, HolidayProvider holidayProvider) throws IOException, ParserException {
         YearMonth month = YearMonth.from(referenceDate);
         IcalParser icalParser = new IcalParser();
-        List<Event> events = new ArrayList<>(icalParser.parse(feedUri, month));
+        List<Event> events = new ArrayList<>(icalParser.parse(feedUri, month, EventSource.CALENDAR));
+        if (schoolFeedUri != null) {
+            events.addAll(icalParser.parse(schoolFeedUri, month, EventSource.SCHOOL));
+        }
         if (holidayProvider != null) {
             events.addAll(holidayProvider.getHolidaysForRange(month.atDay(1), month.atEndOfMonth()));
         }
@@ -42,9 +58,24 @@ public class EventRepository {
      * @param holidayProvider optionaler HolidayProvider (kann null sein)
      */
     public EventRepository(InputStream inputStream, LocalDate referenceDate, HolidayProvider holidayProvider) throws IOException, ParserException {
+        this(inputStream, null, referenceDate, holidayProvider);
+    }
+
+    /**
+     * Erstellt ein EventRepository aus InputStreams (z.B. für Tests).
+     *
+     * @param inputStream         InputStream mit Familien-iCal-Daten
+     * @param schoolInputStream   InputStream mit Schulkalender-Daten (kann null sein)
+     * @param referenceDate       Referenzdatum – der Monat dieses Datums wird geladen
+     * @param holidayProvider     optionaler HolidayProvider (kann null sein)
+     */
+    public EventRepository(InputStream inputStream, InputStream schoolInputStream, LocalDate referenceDate, HolidayProvider holidayProvider) throws IOException, ParserException {
         YearMonth month = YearMonth.from(referenceDate);
         IcalParser icalParser = new IcalParser();
-        List<Event> events = new ArrayList<>(icalParser.parse(inputStream, month));
+        List<Event> events = new ArrayList<>(icalParser.parse(inputStream, month, EventSource.CALENDAR));
+        if (schoolInputStream != null) {
+            events.addAll(icalParser.parse(schoolInputStream, month, EventSource.SCHOOL));
+        }
         if (holidayProvider != null) {
             events.addAll(holidayProvider.getHolidaysForRange(month.atDay(1), month.atEndOfMonth()));
         }
