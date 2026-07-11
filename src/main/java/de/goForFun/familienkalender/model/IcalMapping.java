@@ -61,8 +61,19 @@ public interface IcalMapping {
     }
 
     default String extractUrl(VEvent vEvent) {
-        return vEvent.getProperty("URL")
+        String url = vEvent.getProperty("URL")
                 .map(p -> p.getValue())
                 .orElse(null);
+        if (url != null && !url.isBlank()) {
+            return url;
+        }
+        // Fallback: Wenn keine URL vorhanden, aber eine LOCATION, Google Maps-Link generieren
+        String location = vEvent.getProperty("LOCATION")
+                .map(p -> p.getValue())
+                .orElse(null);
+        if (location != null && !location.isBlank()) {
+            return "https://www.google.com/maps/search/?api=1&query=" + java.net.URLEncoder.encode(location, java.nio.charset.StandardCharsets.UTF_8);
+        }
+        return null;
     }
 }

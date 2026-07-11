@@ -34,14 +34,12 @@ public class TestImageCreation {
                 new Event(List.of("Andreas Neu"), now.withHour(0).withMinute(0), now.plusDays(1).withHour(0).withMinute(0), "Homeoffice", null, EventSource.CALENDAR, null),
                 // Schulkalender: Timed Event – dunkelgrau gedithert
                 new Event(List.of(), now.withHour(8).withMinute(0), now.withHour(11).withMinute(30), "Bundesjugendspiele", null, EventSource.SCHOOL, null),
-                // Timed Event mit Rot (Hex) – roter Hintergrund im Frame
+                // Timed Event mit Rot (Hex) – roter Hintergrund im Frame, mit URL
                 new Event(List.of("Anna Schmidt"), now.withHour(14).withMinute(0), now.withHour(15).withMinute(0), "Arzt (wichtig!)", "#CC0000", EventSource.CALENDAR, "https://maps.google.com/?q=Arztpraxis+München"),
-                // Schulkalender: Timed Event – dunkelgrau gedithert
-                new Event(List.of(), now.withHour(9).withMinute(30), now.withHour(9).withMinute(50), "Pausenverkauf 2b", null, EventSource.SCHOOL, null),
-                // Timed Event ohne Farbe – normaler schwarzer Rahmen
+                // Timed Event ohne Farbe – normaler schwarzer Rahmen, mit URL
                 new Event(List.of("Andreas Neu"), now.withHour(20).withMinute(0), now.withHour(22).withMinute(0), "Montagsturnier", null, EventSource.CALENDAR, "https://turnierplan.de/montag"),
-                // Timed Event mit blauer Farbe – wird wie normal (kein Rot) gerendert
-                new Event(List.of("Anna Schmidt", "Andreas Neu"), now.withHour(16).withMinute(30), now.withHour(17).withMinute(30), "Elternabend", "#0000FF", EventSource.CALENDAR, "https://schule-beispiel.de/elternabend"),
+                // Timed Event mit blauer Farbe – mit URL (Location-Fallback simuliert)
+                new Event(List.of("Anna Schmidt", "Andreas Neu"), now.withHour(16).withMinute(30), now.withHour(17).withMinute(30), "Elternabend", "#0000FF", EventSource.CALENDAR, "https://www.google.com/maps/search/?api=1&query=Grundschule+M%C3%BCnchen"),
                 // Timed Event mit Rot (Name) – roter Hintergrund im Frame
                 new Event(List.of("Anna Schmidt", "Andreas Neu", "Lena Müller"), now.withHour(18).withMinute(0), now.withHour(19).withMinute(0), "Familienessen", "red", EventSource.CALENDAR, null)
         );

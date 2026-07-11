@@ -204,8 +204,8 @@ public class ImageRenderer {
         String dayName = day.getDayOfWeek().getDisplayName(TextStyle.FULL, locale);
         String headerText = String.format("%s (%s)", label, dayName);
 
-        // Column header
-        FontHelper.drawString(graphics, headerText, Aligment.RIGHT, titleFont.get(), 16, COLOR_BLACK, x, DAY_EVENTS_Y_START, width, 16);
+        // Column header (vertikal zentriert zwischen Trennlinie und erstem Event)
+        FontHelper.drawString(graphics, headerText, Aligment.RIGHT, titleFont.get(), 16, COLOR_BLACK, x, DAY_EVENTS_Y_START + 5, width, 16);
 
         // Separate all-day events and timed events
         List<Event> allDayEvents = sortAllDayEvents(events.stream().filter(this::isAllDay).toList());
@@ -777,12 +777,12 @@ public class ImageRenderer {
 
     // ========== QR CODES ==========
 
-    private static final int QR_SIZE = 60; // Feste Größe für alle QR-Codes
+    private static final int QR_SIZE = 70; // Feste Größe für alle QR-Codes (besser scanbar)
 
     /**
-     * Zeichnet QR-Codes für Events mit URL unterhalb der Tagesansicht (linke Hälfte).
+     * Zeichnet QR-Codes für Events mit URL unterhalb der Tagesansicht.
+     * Nutzt die volle Breite beider Tagesspalten (Heute + Morgen).
      * QR-Codes werden nur gerendert, wenn unterhalb der Event-Liste genügend Platz vorhanden ist.
-     * Positionierung: linksbündig ab TODAY_COL_X (gleiche Position wie Uhrzeiten).
      * Farbe: passend zur Event-Farbe (rot bei roten Events, sonst schwarz).
      * Beschreibung: direkt unter dem QR-Code, auf die Breite des QR-Codes abgeschnitten.
      */
@@ -803,7 +803,7 @@ public class ImageRenderer {
         if (eventsWithUrl.isEmpty()) return;
 
         // Layout-Parameter
-        int qrGap = 8;
+        int qrGap = 10;
         int labelHeight = 10; // Höhe für Beschreibung
         int labelGap = 1;    // Abstand QR-Code → Beschreibung
         int footerHeight = 16;
@@ -818,7 +818,7 @@ public class ImageRenderer {
             return;
         }
 
-        // Linksbündig ab TODAY_COL_X (gleiche Position wie Uhrzeiten der Event-Liste)
+        // Volle Breite beider Spalten (Heute + Morgen) nutzen
         int startX = TODAY_COL_X;
         int availableWidth = TOMORROW_COL_X + TOMORROW_COL_WIDTH - TODAY_COL_X;
 
@@ -826,15 +826,20 @@ public class ImageRenderer {
         int maxQrCodes = Math.min(eventsWithUrl.size(), availableWidth / (QR_SIZE + qrGap));
         if (maxQrCodes <= 0) return;
 
+        // QR-Codes gleichmäßig über die volle Breite verteilen
+        int totalQrWidth = maxQrCodes * QR_SIZE;
+        int totalGap = availableWidth - totalQrWidth;
+        int gapBetween = maxQrCodes > 1 ? totalGap / (maxQrCodes - 1) : 0;
+
         for (int i = 0; i < maxQrCodes; i++) {
             Event event = eventsWithUrl.get(i);
-            int qrX = startX + i * (QR_SIZE + qrGap);
+            int qrX = startX + i * (QR_SIZE + gapBetween);
 
             // QR-Code in der Farbe des Events zeichnen
             Color qrColor = isRedColor(event.color()) ? COLOR_RED : COLOR_BLACK;
             drawQrCode(graphics, event.url(), qrX, qrY, QR_SIZE, qrColor);
 
-            // Beschreibung direkt unter dem QR-Code, auf QR-Breite beschränkt (kein Überlappen)
+            // Beschreibung direkt unter dem QR-Code, auf QR-Breite zentriert
             String label = event.summary() != null ? event.summary() : "";
             int labelY = qrY + QR_SIZE + labelGap + labelHeight;
             FontHelper.drawString(graphics, label, Aligment.CENTER, terminalFont.get(), 9, qrColor, qrX, labelY, QR_SIZE, labelHeight);
@@ -845,8 +850,8 @@ public class ImageRenderer {
      * Zeichnet einen einzelnen QR-Code an der angegebenen Position in der angegebenen Farbe.
      * Alle QR-Codes werden in exakt der gleichen Größe (QR_SIZE × QR_SIZE) gerendert.
      * Kein weißer Rahmen – der QR-Code füllt den gesamten Bereich.
-     * Die BitMatrix wird manuell skaliert, damit alle QR-Codes unabhängig vom Inhalt
-     * exakt gleich groß dargestellt werden.
+     * Die BitMatrix wird in minimaler Größe generiert und dann manuell auf die
+     * Zielgröße skaliert, damit alle QR-Codes unabhängig vom Inhalt identisch groß sind.
      */
     private void drawQrCode(Graphics2D graphics, String content, int x, int y, int size, Color color) {
         try {
@@ -855,20 +860,17 @@ public class ImageRenderer {
                     EncodeHintType.MARGIN, 0,
                     EncodeHintType.CHARACTER_SET, "UTF-8"
             );
-            // Generiere die BitMatrix in ihrer natürlichen Größe (abhängig von QR-Version)
-            BitMatrix matrix = writer.encode(content, BarcodeFormat.QR_CODE, size, size, hints);
+            // Minimale Größe anfordern – ZXing gibt die reine Modul-Matrix zurück
+            BitMatrix matrix = writer.encode(content, BarcodeFormat.QR_CODE, 1, 1, hints);
 
-            // Manuelle Skalierung: BitMatrix-Module auf exakte Pixelgröße mappen
-            int matrixWidth = matrix.getWidth();
-            int matrixHeight = matrix.getHeight();
+            int matrixSize = matrix.getWidth(); // Quadratisch, Breite = Höhe
 
-            // Jedes Modul bekommt eine feste Pixelgröße (ganzzahlig)
-            // und der Rest wird gleichmäßig verteilt
+            // Jeden Pixel im Zielbereich auf das entsprechende Modul in der Matrix mappen
             graphics.setColor(color);
             for (int py = 0; py < size; py++) {
-                int matrixRow = py * matrixHeight / size;
+                int matrixRow = py * matrixSize / size;
                 for (int px = 0; px < size; px++) {
-                    int matrixCol = px * matrixWidth / size;
+                    int matrixCol = px * matrixSize / size;
                     if (matrix.get(matrixCol, matrixRow)) {
                         graphics.fillRect(x + px, y + py, 1, 1);
                     }
