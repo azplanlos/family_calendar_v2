@@ -1,6 +1,11 @@
 package de.goForFun.familienkalender;
 
 import com.google.common.base.Suppliers;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.EncodeHintType;
+import com.google.zxing.WriterException;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.QRCodeWriter;
 import de.goForFun.familienkalender.model.Event;
 import de.goForFun.familienkalender.model.EventSource;
 import de.goForFun.familienkalender.model.RenderData;
@@ -22,6 +27,7 @@ import java.time.format.FormatStyle;
 import java.time.format.TextStyle;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Supplier;
 
@@ -151,8 +157,11 @@ public class ImageRenderer {
                 .filter(e -> !isMatchingSpanningEvent(e, spanningAllDayEvents))
                 .toList();
 
-        drawDayColumn(graphics, today, todayNonSpanning, TODAY_COL_X, TODAY_COL_WIDTH, "Heute", eventY);
-        drawDayColumn(graphics, tomorrow, tomorrowNonSpanning, TOMORROW_COL_X, TOMORROW_COL_WIDTH, "Morgen", eventY);
+        // QR-Codes für Events mit URL am unteren Rand der Tagesansicht
+        int todayEndY = drawDayColumn(graphics, today, todayNonSpanning, TODAY_COL_X, TODAY_COL_WIDTH, "Heute", eventY);
+        int tomorrowEndY = drawDayColumn(graphics, tomorrow, tomorrowNonSpanning, TOMORROW_COL_X, TOMORROW_COL_WIDTH, "Morgen", eventY);
+        int maxEndY = Math.max(todayEndY, tomorrowEndY);
+        drawQrCodes(todayEvents, tomorrowEvents, maxEndY, graphics);
     }
 
     /**
@@ -190,7 +199,7 @@ public class ImageRenderer {
         };
     }
 
-    private void drawDayColumn(Graphics2D graphics, LocalDate day, List<Event> events, int x, int width, String label, int spanningEndY) {
+    private int drawDayColumn(Graphics2D graphics, LocalDate day, List<Event> events, int x, int width, String label, int spanningEndY) {
         Locale locale = Locale.GERMAN;
         String dayName = day.getDayOfWeek().getDisplayName(TextStyle.FULL, locale);
         String headerText = String.format("%s (%s)", label, dayName);
@@ -209,7 +218,7 @@ public class ImageRenderer {
         if (!hasRealEvents && allDayEvents.isEmpty()) {
             // Keine Events überhaupt – Smiley ab spanningEndY
             drawNoEventsPlaceholder(graphics, x, spanningEndY, width);
-            return;
+            return spanningEndY + 160; // Smiley + Text braucht ca. 160px
         }
 
         int eventY = spanningEndY;
@@ -223,7 +232,7 @@ public class ImageRenderer {
         if (!hasRealEvents) {
             // Nur VACATION/HOLIDAY Events vorhanden – Smiley unterhalb davon rendern
             drawNoEventsPlaceholder(graphics, x, eventY, width);
-            return;
+            return eventY + 160;
         }
 
         // Render timed events
@@ -235,6 +244,8 @@ public class ImageRenderer {
             drawTimedEvent(graphics, time, participants, event.summary(), event.color(), event.source(), x, eventY, width);
             eventY += 30;
         }
+
+        return eventY;
     }
 
     /**
@@ -761,6 +772,110 @@ public class ImageRenderer {
                     graphics.fillRect(px, py, 1, 1);
                 }
             }
+        }
+    }
+
+    // ========== QR CODES ==========
+
+    private static final int QR_SIZE = 60; // Feste Größe für alle QR-Codes
+
+    /**
+     * Zeichnet QR-Codes für Events mit URL unterhalb der Tagesansicht (linke Hälfte).
+     * QR-Codes werden nur gerendert, wenn unterhalb der Event-Liste genügend Platz vorhanden ist.
+     * Positionierung: linksbündig ab TODAY_COL_X (gleiche Position wie Uhrzeiten).
+     * Farbe: passend zur Event-Farbe (rot bei roten Events, sonst schwarz).
+     * Beschreibung: direkt unter dem QR-Code, auf die Breite des QR-Codes abgeschnitten.
+     */
+    private void drawQrCodes(List<Event> todayEvents, List<Event> tomorrowEvents, int eventsEndY, Graphics2D graphics) {
+        // Sammle alle Events mit URL (Duplikate entfernen über URL)
+        List<Event> eventsWithUrl = new java.util.ArrayList<>();
+        java.util.Set<String> seenUrls = new java.util.HashSet<>();
+        for (Event event : todayEvents) {
+            if (event.url() != null && !event.url().isBlank() && seenUrls.add(event.url())) {
+                eventsWithUrl.add(event);
+            }
+        }
+        for (Event event : tomorrowEvents) {
+            if (event.url() != null && !event.url().isBlank() && seenUrls.add(event.url())) {
+                eventsWithUrl.add(event);
+            }
+        }
+        if (eventsWithUrl.isEmpty()) return;
+
+        // Layout-Parameter
+        int qrGap = 8;
+        int labelHeight = 10; // Höhe für Beschreibung
+        int labelGap = 1;    // Abstand QR-Code → Beschreibung
+        int footerHeight = 16;
+        int qrBlockHeight = QR_SIZE + labelGap + labelHeight;
+
+        // Platzprüfung: QR-Codes werden direkt unter den Events positioniert
+        int qrY = eventsEndY + 4; // 4px Abstand nach letztem Event
+        int bottomLimit = IMAGE_HEIGHT - footerHeight;
+
+        if (qrY + qrBlockHeight > bottomLimit) {
+            // Nicht genug Platz für QR-Codes
+            return;
+        }
+
+        // Linksbündig ab TODAY_COL_X (gleiche Position wie Uhrzeiten der Event-Liste)
+        int startX = TODAY_COL_X;
+        int availableWidth = TOMORROW_COL_X + TOMORROW_COL_WIDTH - TODAY_COL_X;
+
+        // Maximal so viele QR-Codes wie horizontal reinpassen
+        int maxQrCodes = Math.min(eventsWithUrl.size(), availableWidth / (QR_SIZE + qrGap));
+        if (maxQrCodes <= 0) return;
+
+        for (int i = 0; i < maxQrCodes; i++) {
+            Event event = eventsWithUrl.get(i);
+            int qrX = startX + i * (QR_SIZE + qrGap);
+
+            // QR-Code in der Farbe des Events zeichnen
+            Color qrColor = isRedColor(event.color()) ? COLOR_RED : COLOR_BLACK;
+            drawQrCode(graphics, event.url(), qrX, qrY, QR_SIZE, qrColor);
+
+            // Beschreibung direkt unter dem QR-Code, auf QR-Breite beschränkt (kein Überlappen)
+            String label = event.summary() != null ? event.summary() : "";
+            int labelY = qrY + QR_SIZE + labelGap + labelHeight;
+            FontHelper.drawString(graphics, label, Aligment.CENTER, terminalFont.get(), 9, qrColor, qrX, labelY, QR_SIZE, labelHeight);
+        }
+    }
+
+    /**
+     * Zeichnet einen einzelnen QR-Code an der angegebenen Position in der angegebenen Farbe.
+     * Alle QR-Codes werden in exakt der gleichen Größe (QR_SIZE × QR_SIZE) gerendert.
+     * Kein weißer Rahmen – der QR-Code füllt den gesamten Bereich.
+     * Die BitMatrix wird manuell skaliert, damit alle QR-Codes unabhängig vom Inhalt
+     * exakt gleich groß dargestellt werden.
+     */
+    private void drawQrCode(Graphics2D graphics, String content, int x, int y, int size, Color color) {
+        try {
+            QRCodeWriter writer = new QRCodeWriter();
+            Map<EncodeHintType, Object> hints = Map.of(
+                    EncodeHintType.MARGIN, 0,
+                    EncodeHintType.CHARACTER_SET, "UTF-8"
+            );
+            // Generiere die BitMatrix in ihrer natürlichen Größe (abhängig von QR-Version)
+            BitMatrix matrix = writer.encode(content, BarcodeFormat.QR_CODE, size, size, hints);
+
+            // Manuelle Skalierung: BitMatrix-Module auf exakte Pixelgröße mappen
+            int matrixWidth = matrix.getWidth();
+            int matrixHeight = matrix.getHeight();
+
+            // Jedes Modul bekommt eine feste Pixelgröße (ganzzahlig)
+            // und der Rest wird gleichmäßig verteilt
+            graphics.setColor(color);
+            for (int py = 0; py < size; py++) {
+                int matrixRow = py * matrixHeight / size;
+                for (int px = 0; px < size; px++) {
+                    int matrixCol = px * matrixWidth / size;
+                    if (matrix.get(matrixCol, matrixRow)) {
+                        graphics.fillRect(x + px, y + py, 1, 1);
+                    }
+                }
+            }
+        } catch (WriterException e) {
+            // QR-Code konnte nicht erstellt werden – still ignorieren
         }
     }
 

@@ -22,6 +22,7 @@ public interface IcalMapping {
     @Mapping(target = "endTime", expression = "java(unwrapDateProperty(vEvent.getEndDate()))")
     @Mapping(target = "color", expression = "java(extractColor(vEvent))")
     @Mapping(target = "source", expression = "java(de.goForFun.familienkalender.model.EventSource.CALENDAR)")
+    @Mapping(target = "url", expression = "java(extractUrl(vEvent))")
     Event mapVeventEvent(VEvent vEvent);
 
     List<String> mapAttendees(List<Attendee> value);
@@ -55,6 +56,12 @@ public interface IcalMapping {
 
     default String extractColor(VEvent vEvent) {
         return vEvent.getProperty("COLOR")
+                .map(p -> p.getValue())
+                .orElse(null);
+    }
+
+    default String extractUrl(VEvent vEvent) {
+        return vEvent.getProperty("URL")
                 .map(p -> p.getValue())
                 .orElse(null);
     }

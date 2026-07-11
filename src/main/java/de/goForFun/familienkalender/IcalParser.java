@@ -104,7 +104,8 @@ public class IcalParser {
                         occurrenceEnd,
                         baseEvent.summary(),
                         baseEvent.color(),
-                        source
+                        source,
+                        baseEvent.url()
                 ));
             }
         }

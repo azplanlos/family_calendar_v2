@@ -71,7 +71,8 @@ public class HolidayProvider {
                 date.plusDays(1).atStartOfDay(),
                 holiday.getDescription(),
                 null,
-                EventSource.HOLIDAY
+                EventSource.HOLIDAY,
+                null
         );
     }
 }

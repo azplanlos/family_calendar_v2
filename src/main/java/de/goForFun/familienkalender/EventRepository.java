@@ -140,7 +140,8 @@ public class EventRepository {
                             event.endTime(),
                             event.summary(),
                             event.color(),
-                            event.source()
+                            event.source(),
+                            event.url()
                     ));
                 }
                 // Sonst: nicht anzeigen (endet vor 08:00)

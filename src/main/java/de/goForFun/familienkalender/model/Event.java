@@ -9,6 +9,7 @@ public record Event(
         LocalDateTime endTime,
         String summary,
         String color,
-        EventSource source
+        EventSource source,
+        String url
 ) {
 }
