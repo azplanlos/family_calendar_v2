@@ -19,7 +19,9 @@ public class TestImageCreation {
         LocalDateTime now = LocalDateTime.now();
 
         List<Event> todayEvents = List.of(
-                // Feiertag (kein color) – schwarzer Rahmen
+                // Ferien (VACATION) – roter Hintergrund, weiße Schrift, höchste Prio
+                new Event(List.of(), now.withHour(0).withMinute(0), now.plusDays(3).withHour(0).withMinute(0), "Pfingstferien", null, EventSource.VACATION),
+                // Feiertag (HOLIDAY) – roter Hintergrund, weiße Schrift
                 new Event(List.of(), now.withHour(0).withMinute(0), now.plusDays(1).withHour(0).withMinute(0), "Tag der Deutschen Einheit", null, EventSource.HOLIDAY),
                 // Ganztägig mit rotem iCal-Color – roter Balken, schwarze Schrift
                 new Event(List.of("Anna Schmidt"), now.withHour(0).withMinute(0), now.plusDays(1).withHour(0).withMinute(0), "Urlaub Anna", "red", EventSource.CALENDAR),
@@ -38,8 +40,11 @@ public class TestImageCreation {
                 // Timed Event mit Rot (Name) – roter Hintergrund im Frame
                 new Event(List.of("Anna Schmidt", "Andreas Neu", "Lena Müller"), now.withHour(18).withMinute(0), now.withHour(19).withMinute(0), "Familienessen", "red", EventSource.CALENDAR)
         );
-        // Morgen: keine Termine – zeigt Smiley mit "Keine Termine"
-        List<Event> tomorrowEvents = List.of();
+        // Morgen: nur Ferien (spanning) und Feiertag – Smiley wird unter den Events gerendert
+        List<Event> tomorrowEvents = List.of(
+                // Gleiches Ferien-Event wie heute (spanning)
+                new Event(List.of(), now.withHour(0).withMinute(0), now.plusDays(3).withHour(0).withMinute(0), "Pfingstferien", null, EventSource.VACATION)
+        );
         List<WeatherDay> weatherDays = List.of(
                 new WeatherDay("●", "-4 / -1"),
                 new WeatherDay("✻", "-6 / -1"),
@@ -50,6 +55,55 @@ public class TestImageCreation {
 
         ImageRenderer imageRenderer = new ImageRenderer();
         OutputStream outputStream = new FileOutputStream("test.png");
+        imageRenderer.renderImage(outputStream, renderData);
+    }
+
+    @Test
+    public void testImageCreation_onlyVacationAndHoliday_showsSmiley() throws IOException {
+        LocalDateTime now = LocalDateTime.now();
+
+        // Nur Ferien und Feiertage – Smiley sollte trotzdem erscheinen (unterhalb)
+        List<Event> todayEvents = List.of(
+                new Event(List.of(), now.withHour(0).withMinute(0), now.plusDays(5).withHour(0).withMinute(0), "Sommerferien", null, EventSource.VACATION),
+                new Event(List.of(), now.withHour(0).withMinute(0), now.plusDays(1).withHour(0).withMinute(0), "Mariä Himmelfahrt", null, EventSource.HOLIDAY)
+        );
+        List<Event> tomorrowEvents = List.of(
+                new Event(List.of(), now.withHour(0).withMinute(0), now.plusDays(5).withHour(0).withMinute(0), "Sommerferien", null, EventSource.VACATION)
+        );
+        List<WeatherDay> weatherDays = List.of(
+                new WeatherDay("☀", "25 / 32"),
+                new WeatherDay("☀", "24 / 30"),
+                new WeatherDay("☁", "20 / 26")
+        );
+
+        RenderData renderData = new RenderData(now, todayEvents, tomorrowEvents, weatherDays);
+
+        ImageRenderer imageRenderer = new ImageRenderer();
+        OutputStream outputStream = new FileOutputStream("test_vacation_smiley.png");
+        imageRenderer.renderImage(outputStream, renderData);
+    }
+
+    @Test
+    public void testImageCreation_overnightEvent() throws IOException {
+        LocalDateTime now = LocalDateTime.now();
+
+        // Ein Event das gestern um 22:00 startete und heute um 10:00 endet
+        // Wird mit 00:00 Startzeit angezeigt
+        List<Event> todayEvents = List.of(
+                new Event(List.of("Andreas Neu"), now.withHour(0).withMinute(0), now.withHour(10).withMinute(0), "LAN-Party", null, EventSource.CALENDAR),
+                new Event(List.of("Anna Schmidt"), now.withHour(9).withMinute(0), now.withHour(10).withMinute(30), "Meeting", null, EventSource.CALENDAR)
+        );
+        List<Event> tomorrowEvents = List.of();
+        List<WeatherDay> weatherDays = List.of(
+                new WeatherDay("☁", "5 / 12"),
+                new WeatherDay("●", "3 / 8"),
+                new WeatherDay("☀", "7 / 14")
+        );
+
+        RenderData renderData = new RenderData(now, todayEvents, tomorrowEvents, weatherDays);
+
+        ImageRenderer imageRenderer = new ImageRenderer();
+        OutputStream outputStream = new FileOutputStream("test_overnight.png");
         imageRenderer.renderImage(outputStream, renderData);
     }
 }

@@ -125,11 +125,72 @@ public class ImageRenderer {
     // ========== DAY COLUMNS (Heute / Morgen) ==========
 
     private void drawDayColumns(LocalDate today, List<Event> todayEvents, List<Event> tomorrowEvents, Graphics2D graphics) {
-        drawDayColumn(graphics, today, todayEvents, TODAY_COL_X, TODAY_COL_WIDTH, "Heute");
-        drawDayColumn(graphics, today.plusDays(1), tomorrowEvents, TOMORROW_COL_X, TOMORROW_COL_WIDTH, "Morgen");
+        // Finde ganztägige Events, die sowohl heute als auch morgen aktiv sind (durchgängig rendern)
+        LocalDate tomorrow = today.plusDays(1);
+        List<Event> spanningAllDayEvents = todayEvents.stream()
+                .filter(this::isAllDay)
+                .filter(e -> isSpanningDay(e, tomorrow))
+                .toList();
+
+        // Sortiere die spanning Events nach Priorität
+        List<Event> sortedSpanning = sortAllDayEvents(spanningAllDayEvents);
+
+        // Render spanning all-day events across both columns
+        int eventY = DAY_EVENTS_Y_START + 25;
+        int spanningWidth = TOMORROW_COL_X + TOMORROW_COL_WIDTH - TODAY_COL_X;
+        for (Event event : sortedSpanning) {
+            drawAllDayEvent(graphics, event, TODAY_COL_X, eventY, spanningWidth);
+            eventY += 30;
+        }
+
+        // Render each column individually (without spanning events)
+        List<Event> todayNonSpanning = todayEvents.stream()
+                .filter(e -> !spanningAllDayEvents.contains(e))
+                .toList();
+        List<Event> tomorrowNonSpanning = tomorrowEvents.stream()
+                .filter(e -> !isMatchingSpanningEvent(e, spanningAllDayEvents))
+                .toList();
+
+        drawDayColumn(graphics, today, todayNonSpanning, TODAY_COL_X, TODAY_COL_WIDTH, "Heute", eventY);
+        drawDayColumn(graphics, tomorrow, tomorrowNonSpanning, TOMORROW_COL_X, TOMORROW_COL_WIDTH, "Morgen", eventY);
     }
 
-    private void drawDayColumn(Graphics2D graphics, LocalDate day, List<Event> events, int x, int width, String label) {
+    /**
+     * Prüft ob ein Event den angegebenen Tag überspannt (endTime liegt nach dem nächsten Tag 00:00).
+     */
+    private boolean isSpanningDay(Event event, LocalDate nextDay) {
+        if (event.endTime() == null) return false;
+        LocalDateTime nextDayEnd = nextDay.plusDays(1).atStartOfDay();
+        return !event.endTime().isBefore(nextDayEnd);
+    }
+
+    /**
+     * Prüft ob ein Event aus der morgen-Liste dem gleichen spanning Event entspricht.
+     */
+    private boolean isMatchingSpanningEvent(Event event, List<Event> spanningEvents) {
+        return spanningEvents.stream().anyMatch(s ->
+                s.summary().equals(event.summary()) && s.source() == event.source()
+                        && s.startTime().equals(event.startTime()) && s.endTime().equals(event.endTime()));
+    }
+
+    /**
+     * Sortiert ganztägige Events nach Priorität: VACATION > HOLIDAY > Rest.
+     */
+    private List<Event> sortAllDayEvents(List<Event> allDayEvents) {
+        return allDayEvents.stream()
+                .sorted((a, b) -> Integer.compare(allDaySourcePriority(a.source()), allDaySourcePriority(b.source())))
+                .toList();
+    }
+
+    private int allDaySourcePriority(EventSource source) {
+        return switch (source) {
+            case VACATION -> 0;
+            case HOLIDAY -> 1;
+            default -> 2;
+        };
+    }
+
+    private void drawDayColumn(Graphics2D graphics, LocalDate day, List<Event> events, int x, int width, String label, int spanningEndY) {
         Locale locale = Locale.GERMAN;
         String dayName = day.getDayOfWeek().getDisplayName(TextStyle.FULL, locale);
         String headerText = String.format("%s (%s)", label, dayName);
@@ -137,25 +198,42 @@ public class ImageRenderer {
         // Column header
         FontHelper.drawString(graphics, headerText, Aligment.RIGHT, titleFont.get(), 16, COLOR_BLACK, x, DAY_EVENTS_Y_START, width, 16);
 
-        if (events.isEmpty()) {
-            drawNoEventsPlaceholder(graphics, x, DAY_EVENTS_Y_START + 25, width);
+        // Separate all-day events and timed events
+        List<Event> allDayEvents = sortAllDayEvents(events.stream().filter(this::isAllDay).toList());
+        List<Event> timedEvents = events.stream().filter(e -> !isAllDay(e)).toList();
+
+        // Prüfe ob es "echte" Termine gibt (nicht VACATION/HOLIDAY)
+        boolean hasRealEvents = events.stream()
+                .anyMatch(e -> e.source() != EventSource.VACATION && e.source() != EventSource.HOLIDAY);
+
+        if (!hasRealEvents && allDayEvents.isEmpty()) {
+            // Keine Events überhaupt – Smiley ab spanningEndY
+            drawNoEventsPlaceholder(graphics, x, spanningEndY, width);
             return;
         }
 
-        int eventY = DAY_EVENTS_Y_START + 25;
+        int eventY = spanningEndY;
 
-        for (Event event : events) {
-            if (isAllDay(event)) {
-                drawAllDayEvent(graphics, event, x, eventY, width);
-                eventY += 30;
-            } else {
-                String time = event.startTime() != null
-                        ? event.startTime().format(DateTimeFormatter.ofPattern("HH:mm"))
-                        : "";
-                List<String> participants = event.participants() != null ? event.participants() : List.of();
-                drawTimedEvent(graphics, time, participants, event.summary(), event.color(), event.source(), x, eventY, width);
-                eventY += 30;
-            }
+        // Render all-day events (sorted by priority)
+        for (Event event : allDayEvents) {
+            drawAllDayEvent(graphics, event, x, eventY, width);
+            eventY += 30;
+        }
+
+        if (!hasRealEvents) {
+            // Nur VACATION/HOLIDAY Events vorhanden – Smiley unterhalb davon rendern
+            drawNoEventsPlaceholder(graphics, x, eventY, width);
+            return;
+        }
+
+        // Render timed events
+        for (Event event : timedEvents) {
+            String time = event.startTime() != null
+                    ? event.startTime().format(DateTimeFormatter.ofPattern("HH:mm"))
+                    : "";
+            List<String> participants = event.participants() != null ? event.participants() : List.of();
+            drawTimedEvent(graphics, time, participants, event.summary(), event.color(), event.source(), x, eventY, width);
+            eventY += 30;
         }
     }
 
@@ -248,7 +326,12 @@ public class ImageRenderer {
 
     private void drawAllDayEvent(Graphics2D graphics, Event event, int x, int y, int width) {
         String title = event.summary();
-        if (event.source() == EventSource.SCHOOL) {
+        if (event.source() == EventSource.VACATION || event.source() == EventSource.HOLIDAY) {
+            // Ferien und Feiertage: roter Hintergrund, weißer Text
+            graphics.setColor(COLOR_RED);
+            graphics.fillRect(x, y, width, 25);
+            FontHelper.drawString(graphics, title, Aligment.CENTER, titleFont.get(), 13, COLOR_WHITE, x, y + 17, width, 25);
+        } else if (event.source() == EventSource.SCHOOL) {
             // Schulkalender-Event: dunkelgrau gedithert (50% schwarz), schwarze Schrift
             graphics.setColor(COLOR_WHITE);
             graphics.fillRect(x, y, width, 25);

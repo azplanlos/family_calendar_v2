@@ -38,6 +38,7 @@ functions:
       FONTCONFIG_PATH: /tmp/fontconfig
       CALENDAR_FEED: ${param:calendarFeed}
       SCHOOL_CALENDAR_FEED: ${param:schoolCalendarFeed, ''}
+      VACATION_CALENDAR_FEED: ${param:vacationCalendarFeed, 'https://www.schulferien.org/deutschland/ical/ical_bayern.ics'}
       HOLIDAY_COUNTRY: ${param:holidayCountry, 'de'}
       HOLIDAY_STATE: ${param:holidayState, 'by'}
 

@@ -37,7 +37,7 @@ build/
 
 ### Mac OS ###
 .DS_Store
-/test.png
+/test*.png
 target
 demo_alt.png
 .env

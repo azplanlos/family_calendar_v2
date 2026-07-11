@@ -9,5 +9,7 @@ public enum EventSource {
     /** Gesetzlicher Feiertag */
     HOLIDAY,
     /** Event aus dem Schulkalender */
-    SCHOOL
+    SCHOOL,
+    /** Schulferien (z.B. von schulferien.org) */
+    VACATION
 }
