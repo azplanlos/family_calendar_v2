@@ -50,7 +50,7 @@ uint8_t* redBuffer = nullptr;
 bool connectWiFi();
 bool fetchImage();
 void showImage(int batteryPercent);
-void drawBatteryIndicator(int batteryPercent);
+void drawOverlay(int batteryPercent);
 void showErrorImage();
 void handleConnectionError();
 void enterDeepSleep();
@@ -258,12 +258,13 @@ bool fetchImage() {
 void showImage(int batteryPercent) {
     Serial.println("[Display] Writing image to e-paper...");
 
-    // First write the backend image using writeImage with both planes
+    // Write the backend image using writeImage with both planes
     // writeImage sends black plane to command 0x10 and color plane to command 0x13
     display.writeImage(blackBuffer, redBuffer, 0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, false, false, false);
 
-    // Overlay battery indicator in top-left corner
-    drawBatteryIndicator(batteryPercent);
+    // Overlay battery indicator and firmware version in bottom-left corner
+    // (bottom-left because the image is 180° rotated; in panel-RAM terms this is top-left)
+    drawOverlay(batteryPercent);
 
     display.refresh();
     display.hibernate();
@@ -271,11 +272,18 @@ void showImage(int batteryPercent) {
 }
 
 // ============================================================
-// Battery Indicator (rendered locally, top-left corner)
-// Mimics the old CircuitPython code: battery icon + "XX%" label
+// Overlay: Battery Indicator + Firmware Version
+// Drawn via paged drawing (firstPage/nextPage) into a partial window.
+// Uses GFX operations which respect setRotation(2).
 // ============================================================
-void drawBatteryIndicator(int batteryPercent) {
-    // Battery icon dimensions (matching old code position at x=5, y=15)
+void drawOverlay(int batteryPercent) {
+    // Overlay area (in rotated coordinates, i.e. top-left of the visible image)
+    const int16_t overlayX = 0;
+    const int16_t overlayY = 0;
+    const int16_t overlayW = 160; // wide enough for battery + text + version
+    const int16_t overlayH = 20;
+
+    // Battery icon dimensions
     const int batX = 5;
     const int batY = 5;
     const int batW = 20;
@@ -283,26 +291,34 @@ void drawBatteryIndicator(int batteryPercent) {
     const int nippleW = 2;
     const int nippleH = 4;
 
-    // Use partial window to draw over the backend image
-    display.setPartialWindow(0, 0, 80, 20);
+    display.setPartialWindow(overlayX, overlayY, overlayW, overlayH);
+    display.firstPage();
+    do {
+        display.fillScreen(GxEPD_WHITE);
 
-    // Draw battery outline (black)
-    display.drawRect(batX, batY, batW, batH, GxEPD_BLACK);
-    // Draw battery nipple (positive terminal)
-    display.fillRect(batX + batW, batY + (batH - nippleH) / 2, nippleW, nippleH, GxEPD_BLACK);
+        // Draw battery outline (black)
+        display.drawRect(batX, batY, batW, batH, GxEPD_BLACK);
+        // Draw battery nipple (positive terminal)
+        display.fillRect(batX + batW, batY + (batH - nippleH) / 2, nippleW, nippleH, GxEPD_BLACK);
 
-    // Fill level inside battery body
-    int fillW = (int)((batW - 4) * batteryPercent / 100.0f);
-    if (fillW > 0) {
-        uint16_t fillColor = (batteryPercent <= 20) ? GxEPD_RED : GxEPD_BLACK;
-        display.fillRect(batX + 2, batY + 2, fillW, batH - 4, fillColor);
-    }
+        // Fill level inside battery body
+        int fillW = (int)((batW - 4) * batteryPercent / 100.0f);
+        if (fillW > 0) {
+            uint16_t fillColor = (batteryPercent <= 20) ? GxEPD_RED : GxEPD_BLACK;
+            display.fillRect(batX + 2, batY + 2, fillW, batH - 4, fillColor);
+        }
 
-    // Draw percentage text next to battery icon
-    display.setTextColor(GxEPD_BLACK);
-    display.setFont(nullptr); // built-in 6x8 font (no anti-aliasing)
-    display.setCursor(batX + batW + nippleW + 4, batY + 1);
-    display.print(String(batteryPercent) + "%");
+        // Draw percentage text next to battery icon
+        display.setTextColor(GxEPD_BLACK);
+        display.setFont(nullptr); // built-in 6x8 font (no anti-aliasing)
+        display.setCursor(batX + batW + nippleW + 4, batY + 1);
+        display.print(String(batteryPercent) + "%");
+
+        // Draw firmware version after battery percentage
+        display.setCursor(batX + batW + nippleW + 4 + 30, batY + 1);
+        display.print("v" + String(FW_VERSION_STRING));
+
+    } while (display.nextPage());
 }
 
 // ============================================================
