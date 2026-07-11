@@ -11,6 +11,7 @@ import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -49,7 +50,7 @@ public class ImageRenderer {
     private static final int RIGHT_AREA_X = 480;
     private static final int WEATHER_Y = 50;
     private static final int WEATHER_WIDTH = RIGHT_EDGE - RIGHT_AREA_X;
-    private static final int CALENDAR_Y = 200;
+    private static final int CALENDAR_Y = 155;
 
     // Colors
     private static final Color COLOR_RED = new Color(180, 30, 30);
@@ -257,7 +258,7 @@ public class ImageRenderer {
         }
     }
 
-    // ========== MONTH CALENDAR ==========
+    // ========== WEEK CALENDAR (5 weeks) ==========
 
     private void drawMonthCalendar(LocalDate today, Graphics2D graphics) {
         int y = CALENDAR_Y;
@@ -267,54 +268,86 @@ public class ImageRenderer {
         int gridWidth = cellWidth * 7;
         int x = RIGHT_EDGE - gridWidth; // align grid right edge to RIGHT_EDGE
 
-        // Month + Year header
-        String monthYear = today.getMonth().getDisplayName(TextStyle.FULL, Locale.GERMAN) + " " + today.getYear();
-        FontHelper.drawString(graphics, monthYear, Aligment.RIGHT, titleFont.get(), 14, COLOR_BLACK, x, y + 14, gridWidth, 14);
-
         int cellHeight = 38;
-        int gridY = y + 25;
+        int headerHeight = 16;
 
-        // Calculate first day position
-        LocalDate firstOfMonth = today.withDayOfMonth(1);
-        int startDayOfWeek = firstOfMonth.getDayOfWeek().getValue(); // 1=Monday
+        // Start from Monday of the current week
+        LocalDate weekStart = today.with(DayOfWeek.MONDAY);
 
-        int daysInMonth = today.lengthOfMonth();
-        int currentDay = 1;
+        // Build the list of days to display: 5 weeks = 35 days
+        LocalDate endDate = weekStart.plusWeeks(5); // exclusive
 
-        int row = 0;
-        while (currentDay <= daysInMonth) {
-            for (int col = 0; col < 7 && currentDay <= daysInMonth; col++) {
-                if (row == 0 && col < startDayOfWeek - 1) {
-                    continue;
-                }
+        // Track current Y position (headers consume vertical space)
+        int currentY = y;
+        int currentMonth = -1;
+
+        LocalDate cursor = weekStart;
+        while (cursor.isBefore(endDate)) {
+            // Check if we entered a new month
+            if (cursor.getMonthValue() != currentMonth) {
+                // If we were mid-row in the previous month, advance to next row
+                // (this is handled by starting each month section fresh)
+
+                // Draw month header
+                String monthYear = cursor.getMonth().getDisplayName(TextStyle.FULL, Locale.GERMAN) + " " + cursor.getYear();
+                FontHelper.drawString(graphics, monthYear, Aligment.RIGHT, titleFont.get(), 12, COLOR_BLACK, x, currentY + 12, gridWidth, headerHeight);
+                currentY += headerHeight + 2;
+                currentMonth = cursor.getMonthValue();
+            }
+
+            // Determine how many days to render in this row
+            // A row always represents Mon-Sun, but we only show days of the current month
+            LocalDate rowMonday = cursor.with(DayOfWeek.MONDAY);
+            int startCol = cursor.getDayOfWeek().getValue() - 1; // 0=Mon
+
+            // Draw cells for this row (only days belonging to current month and before endDate)
+            for (int col = startCol; col < 7; col++) {
+                LocalDate day = rowMonday.plusDays(col);
+
+                // Stop if we've gone past our 5-week window
+                if (!day.isBefore(endDate)) break;
+
+                // Stop if we've crossed into the next month (will be handled in next iteration)
+                if (day.getMonthValue() != currentMonth) break;
+
                 int cellX = x + col * cellWidth;
-                int cellY = gridY + row * cellHeight;
+                int cellY = currentY;
 
                 // Weekend background: dithered gray pattern (checkerboard)
-                if (col >= 5 && currentDay != today.getDayOfMonth()) {
+                if (col >= 5 && !day.equals(today)) {
                     fillDithered(graphics, cellX + 1, cellY + 1, cellWidth - 2, cellHeight - 2, COLOR_BLACK);
                 }
 
                 // Highlight today: red border, red dithered background, red text
-                if (currentDay == today.getDayOfMonth()) {
+                if (day.equals(today)) {
                     fillDithered(graphics, cellX + 1, cellY + 1, cellWidth - 2, cellHeight - 2, COLOR_RED);
                     graphics.setColor(COLOR_RED);
                     graphics.drawRect(cellX, cellY, cellWidth - 1, cellHeight - 1);
                     graphics.drawRect(cellX + 1, cellY + 1, cellWidth - 3, cellHeight - 3);
-                    FontHelper.drawString(graphics, String.valueOf(currentDay), Aligment.CENTER, titleFont.get(), 12, COLOR_RED, cellX, cellY + (cellHeight / 2) + 6, cellWidth, cellHeight);
+                    FontHelper.drawString(graphics, String.valueOf(day.getDayOfMonth()), Aligment.CENTER, titleFont.get(), 12, COLOR_RED, cellX, cellY + (cellHeight / 2) + 6, cellWidth, cellHeight);
                 } else {
-                    // Weekend days in red text
                     Color textColor = (col >= 5) ? COLOR_RED : COLOR_BLACK;
-                    FontHelper.drawString(graphics, String.valueOf(currentDay), Aligment.CENTER, terminalFont.get(), 12, textColor, cellX, cellY + (cellHeight / 2) + 6, cellWidth, cellHeight);
+                    FontHelper.drawString(graphics, String.valueOf(day.getDayOfMonth()), Aligment.CENTER, terminalFont.get(), 12, textColor, cellX, cellY + (cellHeight / 2) + 6, cellWidth, cellHeight);
                 }
 
                 // Cell border
                 graphics.setColor(COLOR_BLACK);
                 graphics.drawRect(cellX, cellY, cellWidth - 1, cellHeight - 1);
 
-                currentDay++;
+                cursor = day.plusDays(1);
             }
-            row++;
+
+            currentY += cellHeight;
+
+            // If cursor is still in same month but we finished a row, advance cursor to next Monday
+            if (cursor.isBefore(endDate) && cursor.getMonthValue() == currentMonth) {
+                // cursor is already at the next day after last rendered, which should be next Monday
+                // unless month boundary: if cursor went past Sunday, it's already Monday
+                if (cursor.getDayOfWeek() != DayOfWeek.MONDAY) {
+                    // This shouldn't happen since we iterate full weeks, but safety
+                    cursor = cursor.with(DayOfWeek.MONDAY).plusWeeks(1);
+                }
+            }
         }
     }
 
