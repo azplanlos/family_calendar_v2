@@ -46,10 +46,38 @@ public class IcalParser {
     }
 
     /**
+     * Lädt den iCal-Feed von einer URI und parst alle Events im angegebenen Datumsbereich.
+     *
+     * @param feedUri URI des iCal-Feeds
+     * @param from    Startdatum (inklusive)
+     * @param to      Enddatum (inklusive)
+     * @param source  die EventSource, die den geparsten Events zugewiesen wird
+     */
+    public List<Event> parse(URI feedUri, LocalDate from, LocalDate to, EventSource source) throws IOException, ParserException {
+        try (InputStream inputStream = feedUri.toURL().openStream()) {
+            return parse(inputStream, from, to, source);
+        }
+    }
+
+    /**
      * Parst einen iCal-InputStream und expandiert alle Events im angegebenen Monat.
      */
     public List<Event> parse(InputStream inputStream, YearMonth month) throws IOException, ParserException {
         return parse(inputStream, month, EventSource.CALENDAR);
+    }
+
+    /**
+     * Parst einen iCal-InputStream und expandiert alle Events im angegebenen Datumsbereich.
+     *
+     * @param inputStream InputStream mit iCal-Daten
+     * @param from        Startdatum (inklusive)
+     * @param to          Enddatum (inklusive)
+     * @param source      die EventSource, die den geparsten Events zugewiesen wird
+     */
+    public List<Event> parse(InputStream inputStream, LocalDate from, LocalDate to, EventSource source) throws IOException, ParserException {
+        ZonedDateTime rangeStart = from.atStartOfDay(ZoneId.systemDefault());
+        ZonedDateTime rangeEnd = to.plusDays(1).atStartOfDay(ZoneId.systemDefault());
+        return parseForPeriod(inputStream, rangeStart, rangeEnd, source);
     }
 
     /**
@@ -61,12 +89,20 @@ public class IcalParser {
      */
     @SuppressWarnings("unchecked")
     public List<Event> parse(InputStream inputStream, YearMonth month, EventSource source) throws IOException, ParserException {
+        ZonedDateTime monthStart = month.atDay(1).atStartOfDay(ZoneId.systemDefault());
+        ZonedDateTime monthEnd = month.plusMonths(1).atDay(1).atStartOfDay(ZoneId.systemDefault());
+        return parseForPeriod(inputStream, monthStart, monthEnd, source);
+    }
+
+    /**
+     * Interne Methode: Parst einen iCal-InputStream und expandiert alle Events im angegebenen Zeitraum.
+     */
+    @SuppressWarnings("unchecked")
+    private List<Event> parseForPeriod(InputStream inputStream, ZonedDateTime periodStart, ZonedDateTime periodEnd, EventSource source) throws IOException, ParserException {
         CalendarBuilder builder = new CalendarBuilder();
         Calendar calendar = builder.build(inputStream);
 
-        ZonedDateTime monthStart = month.atDay(1).atStartOfDay(ZoneId.systemDefault());
-        ZonedDateTime monthEnd = month.plusMonths(1).atDay(1).atStartOfDay(ZoneId.systemDefault());
-        Period<ZonedDateTime> monthPeriod = new Period<>(monthStart, Duration.between(monthStart, monthEnd));
+        Period<ZonedDateTime> monthPeriod = new Period<>(periodStart, Duration.between(periodStart, periodEnd));
 
         List<Event> events = new ArrayList<>();
 

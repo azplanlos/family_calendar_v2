@@ -352,10 +352,10 @@ public class ImageRenderer {
             graphics.drawRect(x, y, width, 25);
             FontHelper.drawString(graphics, title, Aligment.CENTER, titleFont.get(), 13, COLOR_WHITE, x, y + 17, width, 25);
         } else if (isRedColor(event.color())) {
-            // Rot-markiertes Event: roter Hintergrund, schwarze Schrift
+            // Rot-markiertes Event: transparenter Hintergrund, roter Rahmen, roter Text
             graphics.setColor(COLOR_RED);
-            graphics.fillRect(x, y, width, 25);
-            FontHelper.drawString(graphics, title, Aligment.CENTER, titleFont.get(), 13, COLOR_BLACK, x, y + 17, width, 25);
+            graphics.drawRect(x, y, width, 25);
+            FontHelper.drawString(graphics, title, Aligment.CENTER, titleFont.get(), 13, COLOR_RED, x, y + 17, width, 25);
         } else {
             // Andere Events: schwarzer Rahmen, schwarze Schrift auf weißem Grund
             graphics.setColor(COLOR_WHITE);
@@ -416,9 +416,9 @@ public class ImageRenderer {
             graphics.setColor(COLOR_BLACK);
             graphics.drawRect(frameLeftX, frameY, frameWidth, frameHeight);
         } else if (isRed) {
-            // Rot-markiertes Event: roter Hintergrund im Frame-Bereich
+            // Rot-markiertes Event: roter Rahmen im Frame-Bereich
             graphics.setColor(COLOR_RED);
-            graphics.fillRect(frameLeftX, frameY, frameWidth, frameHeight);
+            graphics.drawRect(frameLeftX, frameY, frameWidth, frameHeight);
         } else {
             // Normales Event: schwarzer Rahmen auf weißem Grund
             graphics.setColor(COLOR_BLACK);
@@ -455,7 +455,7 @@ public class ImageRenderer {
 
         // Event title inside the frame (after last badge)
         if (titleWidth > 0) {
-            Color titleColor = isSchool ? COLOR_WHITE : COLOR_BLACK;
+            Color titleColor = isSchool ? COLOR_WHITE : isRed ? COLOR_RED : COLOR_BLACK;
             FontHelper.drawString(graphics, title, Aligment.LEFT, terminalFont.get(), 13, titleColor, titleX + 4, frameY + 16, titleWidth - 8, frameHeight);
         }
     }

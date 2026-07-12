@@ -55,14 +55,18 @@ public class EventRepository {
      * @param holidayProvider     optionaler HolidayProvider (kann null sein)
      */
     public EventRepository(URI feedUri, URI schoolFeedUri, URI vacationFeedUri, LocalDate referenceDate, HolidayProvider holidayProvider) throws IOException, ParserException {
-        YearMonth month = YearMonth.from(referenceDate);
         IcalParser icalParser = new IcalParser();
         List<Event> events = new ArrayList<>();
         List<String> errors = new ArrayList<>();
 
+        // Ladebereich berechnen: aktueller Monat + Folgemonat, damit Monatswechsel
+        // sowohl in der Tagesübersicht (Morgen) als auch im 5-Wochen-Kalenderraster abgedeckt sind.
+        LocalDate rangeStart = YearMonth.from(referenceDate).atDay(1);
+        LocalDate rangeEnd = YearMonth.from(referenceDate).plusMonths(1).atEndOfMonth();
+
         // Hauptkalender-Feed laden
         try {
-            events.addAll(icalParser.parse(feedUri, month, EventSource.CALENDAR));
+            events.addAll(icalParser.parse(feedUri, rangeStart, rangeEnd, EventSource.CALENDAR));
         } catch (IOException | ParserException e) {
             errors.add("Kalender-Feed: " + e.getMessage());
         }
@@ -70,7 +74,7 @@ public class EventRepository {
         // Schulkalender-Feed laden
         if (schoolFeedUri != null) {
             try {
-                events.addAll(icalParser.parse(schoolFeedUri, month, EventSource.SCHOOL));
+                events.addAll(icalParser.parse(schoolFeedUri, rangeStart, rangeEnd, EventSource.SCHOOL));
             } catch (IOException | ParserException e) {
                 errors.add("Schulkalender: " + e.getMessage());
             }
@@ -79,7 +83,7 @@ public class EventRepository {
         // Ferien-Feed laden
         if (vacationFeedUri != null) {
             try {
-                events.addAll(icalParser.parse(vacationFeedUri, month, EventSource.VACATION));
+                events.addAll(icalParser.parse(vacationFeedUri, rangeStart, rangeEnd, EventSource.VACATION));
             } catch (IOException | ParserException e) {
                 errors.add("Ferien-Feed: " + e.getMessage());
             }
@@ -88,7 +92,7 @@ public class EventRepository {
         // Feiertage laden
         if (holidayProvider != null) {
             try {
-                events.addAll(holidayProvider.getHolidaysForRange(month.atDay(1), month.atEndOfMonth()));
+                events.addAll(holidayProvider.getHolidaysForRange(rangeStart, rangeEnd));
             } catch (Exception e) {
                 errors.add("Feiertage: " + e.getMessage());
             }
@@ -133,14 +137,18 @@ public class EventRepository {
      * @param holidayProvider       optionaler HolidayProvider (kann null sein)
      */
     public EventRepository(InputStream inputStream, InputStream schoolInputStream, InputStream vacationInputStream, LocalDate referenceDate, HolidayProvider holidayProvider) throws IOException, ParserException {
-        YearMonth month = YearMonth.from(referenceDate);
         IcalParser icalParser = new IcalParser();
         List<Event> events = new ArrayList<>();
         List<String> errors = new ArrayList<>();
 
+        // Ladebereich berechnen: aktueller Monat + Folgemonat, damit Monatswechsel
+        // sowohl in der Tagesübersicht (Morgen) als auch im 5-Wochen-Kalenderraster abgedeckt sind.
+        LocalDate rangeStart = YearMonth.from(referenceDate).atDay(1);
+        LocalDate rangeEnd = YearMonth.from(referenceDate).plusMonths(1).atEndOfMonth();
+
         // Hauptkalender-Feed laden
         try {
-            events.addAll(icalParser.parse(inputStream, month, EventSource.CALENDAR));
+            events.addAll(icalParser.parse(inputStream, rangeStart, rangeEnd, EventSource.CALENDAR));
         } catch (IOException | ParserException e) {
             errors.add("Kalender-Feed: " + e.getMessage());
         }
@@ -148,7 +156,7 @@ public class EventRepository {
         // Schulkalender-Feed laden
         if (schoolInputStream != null) {
             try {
-                events.addAll(icalParser.parse(schoolInputStream, month, EventSource.SCHOOL));
+                events.addAll(icalParser.parse(schoolInputStream, rangeStart, rangeEnd, EventSource.SCHOOL));
             } catch (IOException | ParserException e) {
                 errors.add("Schulkalender: " + e.getMessage());
             }
@@ -157,7 +165,7 @@ public class EventRepository {
         // Ferien-Feed laden
         if (vacationInputStream != null) {
             try {
-                events.addAll(icalParser.parse(vacationInputStream, month, EventSource.VACATION));
+                events.addAll(icalParser.parse(vacationInputStream, rangeStart, rangeEnd, EventSource.VACATION));
             } catch (IOException | ParserException e) {
                 errors.add("Ferien-Feed: " + e.getMessage());
             }
@@ -166,7 +174,7 @@ public class EventRepository {
         // Feiertage laden
         if (holidayProvider != null) {
             try {
-                events.addAll(holidayProvider.getHolidaysForRange(month.atDay(1), month.atEndOfMonth()));
+                events.addAll(holidayProvider.getHolidaysForRange(rangeStart, rangeEnd));
             } catch (Exception e) {
                 errors.add("Feiertage: " + e.getMessage());
             }
