@@ -304,8 +304,13 @@ void showImage(int batteryPercent) {
 
 inline void bufferSetPixel(uint8_t* buffer, int x, int y, bool ink) {
     if (x < 0 || x >= DISPLAY_WIDTH || y < 0 || y >= DISPLAY_HEIGHT) return;
-    uint32_t byteIdx = (y * DISPLAY_WIDTH + x) / 8;
-    uint8_t bitMask = 0x80 >> (x % 8);
+    // The backend image is pre-rotated 180° for the physical panel orientation.
+    // Overlay coordinates use logical (visible) orientation, so we must flip them
+    // to match the buffer layout.
+    int px = DISPLAY_WIDTH - 1 - x;
+    int py = DISPLAY_HEIGHT - 1 - y;
+    uint32_t byteIdx = (py * DISPLAY_WIDTH + px) / 8;
+    uint8_t bitMask = 0x80 >> (px % 8);
     if (ink) {
         buffer[byteIdx] &= ~bitMask; // 0 = ink on
     } else {
