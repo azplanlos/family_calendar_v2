@@ -72,12 +72,14 @@ public class CreateKalenderImage implements RequestHandler<ScheduledEvent, Void>
             // Geordnete Liste aller Familienmitglieder (aus allen bekannten Events)
             List<String> participants = eventRepository.getAllParticipants();
 
-            // TODO: Wetterdaten aus externer API laden
-            List<WeatherDay> weatherDays = List.of(
-                    new WeatherDay("●", "-4 / -1"),
-                    new WeatherDay("✻", "-6 / -1"),
-                    new WeatherDay("☁", "-7 / -1")
+            // Wetterdaten von OpenWeatherMap laden
+            WeatherService weatherService = new WeatherService(
+                    System.getenv("OPENWEATHER_API_KEY"),
+                    System.getenv("OPENWEATHER_LAT"),
+                    System.getenv("OPENWEATHER_LON")
             );
+            List<WeatherDay> weatherDays = weatherService.fetchForecast();
+            logger.log("Weather forecast: " + weatherDays.size() + " days loaded");
 
             RenderData renderData = new RenderData(now, todayEvents, tomorrowEvents, weatherDays, calendarEvents, participants, eventRepository.getErrors());
 

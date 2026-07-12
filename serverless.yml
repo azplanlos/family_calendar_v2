@@ -41,6 +41,9 @@ functions:
       VACATION_CALENDAR_FEED: ${param:vacationCalendarFeed, 'https://www.feiertage-deutschland.de/kalender-download/ics/schulferien-bayern.ics'}
       HOLIDAY_COUNTRY: ${param:holidayCountry, 'de'}
       HOLIDAY_STATE: ${param:holidayState, 'by'}
+      OPENWEATHER_API_KEY: ${param:openweatherApiKey}
+      OPENWEATHER_LAT: ${param:openweatherLat}
+      OPENWEATHER_LON: ${param:openweatherLon}
 
   ServeCalendarImage:
     handler: de.goForFun.familienkalender.ServeCalendarImage

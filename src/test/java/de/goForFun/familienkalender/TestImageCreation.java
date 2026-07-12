@@ -49,9 +49,9 @@ public class TestImageCreation {
                 new Event(List.of(), now.withHour(0).withMinute(0), now.plusDays(3).withHour(0).withMinute(0), "Pfingstferien", null, EventSource.VACATION, null)
         );
         List<WeatherDay> weatherDays = List.of(
-                new WeatherDay("●", "-4 / -1"),
-                new WeatherDay("✻", "-6 / -1"),
-                new WeatherDay("☁", "-7 / -1")
+                new WeatherDay("04d", -4, -1),
+                new WeatherDay("13d", -6, -1),
+                new WeatherDay("03d", -7, -1)
         );
 
         RenderData renderData = buildRenderData(now, todayEvents, tomorrowEvents, weatherDays);
@@ -74,9 +74,9 @@ public class TestImageCreation {
                 new Event(List.of(), now.withHour(0).withMinute(0), now.plusDays(5).withHour(0).withMinute(0), "Sommerferien", null, EventSource.VACATION, null)
         );
         List<WeatherDay> weatherDays = List.of(
-                new WeatherDay("☀", "25 / 32"),
-                new WeatherDay("☀", "24 / 30"),
-                new WeatherDay("☁", "20 / 26")
+                new WeatherDay("01d", 25, 32),
+                new WeatherDay("01d", 24, 30),
+                new WeatherDay("03d", 20, 26)
         );
 
         RenderData renderData = buildRenderData(now, todayEvents, tomorrowEvents, weatherDays);
@@ -98,9 +98,9 @@ public class TestImageCreation {
         );
         List<Event> tomorrowEvents = List.of();
         List<WeatherDay> weatherDays = List.of(
-                new WeatherDay("☁", "5 / 12"),
-                new WeatherDay("●", "3 / 8"),
-                new WeatherDay("☀", "7 / 14")
+                new WeatherDay("03d", 5, 12),
+                new WeatherDay("04d", 3, 8),
+                new WeatherDay("01d", 7, 14)
         );
 
         RenderData renderData = buildRenderData(now, todayEvents, tomorrowEvents, weatherDays);

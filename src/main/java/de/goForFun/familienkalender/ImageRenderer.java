@@ -504,20 +504,82 @@ public class ImageRenderer {
 
     // ========== WEATHER FORECAST ==========
 
+    // Wetter-Icon Sprite Sheet: 630x70px, 9 Tiles à 70x70px
+    private static final int WEATHER_TILE_WIDTH = 70;
+    private static final int WEATHER_TILE_HEIGHT = 70;
+    private static final String[] WEATHER_ICON_CODES = {
+            "01d", "02d", "03d", "04d", "09d", "10d", "11d", "13d", "50d"
+    };
+
+    Supplier<BufferedImage> weatherSpriteSheet = Suppliers.memoize(() -> {
+        try {
+            return ImageIO.read(Objects.requireNonNull(
+                    this.getClass().getResourceAsStream("/icons/wetter.bmp")));
+        } catch (IOException e) {
+            throw new RuntimeException("Wetter-Spritesheet nicht ladbar", e);
+        }
+    });
+
     private void drawWeatherForecast(List<WeatherDay> weatherDays, Graphics2D graphics) {
         int x = RIGHT_AREA_X;
         int y = WEATHER_Y;
         int dayWidth = WEATHER_WIDTH / 3;
 
+        BufferedImage spriteSheet = weatherSpriteSheet.get();
+
         for (int i = 0; i < Math.min(3, weatherDays.size()); i++) {
             WeatherDay weather = weatherDays.get(i);
             int dayX = x + i * dayWidth;
 
-            // Weather icon (large placeholder)
-            FontHelper.drawString(graphics, weather.icon(), Aligment.CENTER, titleFont.get(), 36, COLOR_BLACK, dayX, y + 45, dayWidth, 40);
+            // Icon-Index aus dem Code ermitteln
+            int tileIndex = getWeatherTileIndex(weather.iconCode());
 
-            // Temperature
-            FontHelper.drawString(graphics, weather.temperature(), Aligment.CENTER, terminalFont.get(), 12, COLOR_RED, dayX, y + 70, dayWidth, 14);
+            // Icon aus Sprite Sheet zeichnen (zentriert in der Spalte)
+            // Hintergrundpixel (weiß/hell) werden transparent behandelt
+            int iconX = dayX + (dayWidth - WEATHER_TILE_WIDTH) / 2;
+            int srcX = tileIndex * WEATHER_TILE_WIDTH;
+            drawWeatherTile(graphics, spriteSheet, srcX, 0, iconX, y, WEATHER_TILE_WIDTH, WEATHER_TILE_HEIGHT);
+
+            // Temperatur unterhalb des Icons
+            FontHelper.drawString(graphics, weather.temperatureDisplay(), Aligment.CENTER,
+                    terminalFont.get(), 12, COLOR_RED, dayX, y + WEATHER_TILE_HEIGHT + 8, dayWidth, 14);
+        }
+    }
+
+    private int getWeatherTileIndex(String iconCode) {
+        for (int i = 0; i < WEATHER_ICON_CODES.length; i++) {
+            if (WEATHER_ICON_CODES[i].equals(iconCode)) {
+                return i;
+            }
+        }
+        // Fallback: broken clouds (Index 3) als generisches Wolken-Icon
+        return 3;
+    }
+
+    /**
+     * Zeichnet ein einzelnes Wetter-Icon-Tile aus dem Sprite Sheet.
+     * Das Sprite Sheet ist ein Indexed-BMP (Aseprite-Export):
+     *   Index 0 = transparent (Hintergrund, überspringen)
+     *   Index 1 = schwarz (Linien/Zeichnung)
+     *   Index 2 = rot (Akzente)
+     */
+    private void drawWeatherTile(Graphics2D graphics, BufferedImage spriteSheet,
+                                  int srcX, int srcY, int destX, int destY, int width, int height) {
+        var raster = spriteSheet.getRaster();
+        int[] pixel = new int[1];
+        for (int py = 0; py < height; py++) {
+            for (int px = 0; px < width; px++) {
+                raster.getPixel(srcX + px, srcY + py, pixel);
+                int index = pixel[0];
+                if (index == 0) {
+                    continue; // transparent – nicht zeichnen
+                } else if (index == 2) {
+                    graphics.setColor(COLOR_RED);
+                } else {
+                    graphics.setColor(COLOR_BLACK);
+                }
+                graphics.fillRect(destX + px, destY + py, 1, 1);
+            }
         }
     }
 
