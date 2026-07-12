@@ -418,26 +418,26 @@ void bufferDrawString(uint8_t* buffer, int sx, int sy, const char* str) {
 
 // ============================================================
 // Draw Battery Indicator into Buffer
-// Positioned at top-right of the visible image.
-// The backend image is pre-oriented for the physical panel, so
-// "top-right visible" = physical pixel (WIDTH - margin, 0 + margin).
+// Positioned at top-left of the visible image, vertically centered
+// between the top edge and the header separator line (y≈32).
+// Left-aligned with the content area (x=10).
 // ============================================================
 void drawBatteryIntoBuffer(int batteryPercent) {
-    // Position: top-right area of physical panel
+    // Position: top-left area, aligned with content
     const int batW = 20;
     const int batH = 10;
     const int nippleW = 2;
     const int nippleH = 4;
-    const int margin = 5;
 
-    // Battery icon top-right corner (leave space for percentage text to the right)
-    // Layout: [battery icon][nipple] [percentage%]
-    // Total width estimate: batW + nippleW + 4 + 4*6(chars) ≈ 50px
-    int batX = DISPLAY_WIDTH - margin - 50;
-    int batY = margin;
+    // Left-aligned with other content (matches backend TODAY_COL_X = 10)
+    // Vertically centered between top edge (0) and header line (~32):
+    // (32 - batH) / 2 = 11
+    int batX = 10;
+    int batY = 11;
 
     // Clear background area behind overlay (white)
-    bufferClearRect(batX - 2, batY - 2, 54, batH + 4);
+    // Total width: batW(20) + nippleW(2) + gap(4) + text(~4chars*6px=24) + padding = ~54px
+    bufferClearRect(batX - 1, batY - 1, 56, batH + 2);
 
     // Draw battery outline (black plane)
     bufferDrawRect(blackBuffer, batX, batY, batW, batH);
@@ -467,24 +467,24 @@ void drawBatteryIntoBuffer(int batteryPercent) {
 
 // ============================================================
 // Draw Firmware Version into Buffer
-// Positioned at bottom-left, right after the backend version.
-// The backend renders its version at approximately x=10, y=HEIGHT-12
-// with ~10pt font. The firmware version is drawn after it with a
-// separator, using the small 5x7 built-in font at the very bottom.
+// Positioned at bottom-left, right after the backend version,
+// on the same visual line as the backend version and the
+// "letzte Aktualisierung" text (baseline y=468 in backend).
 // ============================================================
 void drawFirmwareVersionIntoBuffer() {
-    // Position: bottom-left of physical panel, offset to the right
-    // to not overlap with the backend version text.
+    // Backend renders its version at x=10, baseline y=468 (10pt font).
     // Backend version "v1.2.3" takes about 60-80px with its 10pt font.
     // We place firmware version starting at x=80 to leave space.
     const int versionX = 80;
-    const int versionY = DISPLAY_HEIGHT - 10; // near bottom edge
+    // Align with backend text baseline (468). The 5x7 pixel font is drawn
+    // from top, so we offset to align bottoms: 468 - 7 + 1 = 462.
+    const int versionY = DISPLAY_HEIGHT - 18;
 
     // Build version string: "| FW v0.0.0"
     char fwStr[32];
     snprintf(fwStr, sizeof(fwStr), "| FW v%s", FW_VERSION_STRING);
 
-    // Clear a small area behind the text (avoid blending with footer line)
+    // Clear a small area behind the text
     int strLen = strlen(fwStr);
     bufferClearRect(versionX, versionY - 1, strLen * 6 + 2, 9);
 

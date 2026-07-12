@@ -109,7 +109,7 @@ public class ImageRenderer {
 
         drawHeader(data.now(), graphics);
         drawDayColumns(today, data.todayEvents(), data.tomorrowEvents(), graphics);
-        drawWeatherForecast(data.weatherDays(), graphics);
+        drawWeatherForecast(today, data.weatherDays(), graphics);
         drawMonthCalendar(today, data.calendarEvents(), data.participants(), graphics);
         drawErrors(data.errors(), graphics);
         drawFooter(data.now(), graphics);
@@ -520,7 +520,7 @@ public class ImageRenderer {
         }
     });
 
-    private void drawWeatherForecast(List<WeatherDay> weatherDays, Graphics2D graphics) {
+    private void drawWeatherForecast(LocalDate today, List<WeatherDay> weatherDays, Graphics2D graphics) {
         int x = RIGHT_AREA_X;
         int y = WEATHER_Y;
         int dayWidth = WEATHER_WIDTH / 3;
@@ -531,19 +531,57 @@ public class ImageRenderer {
             WeatherDay weather = weatherDays.get(i);
             int dayX = x + i * dayWidth;
 
+            // Wochentagsabkürzung über dem Icon
+            LocalDate forecastDay = today.plusDays(i);
+            String dayName = forecastDay.getDayOfWeek().getDisplayName(TextStyle.SHORT, Locale.GERMAN);
+            FontHelper.drawString(graphics, dayName, Aligment.CENTER, titleFont.get(), 12, COLOR_BLACK, dayX, y + 12, dayWidth, 14);
+
             // Icon-Index aus dem Code ermitteln
             int tileIndex = getWeatherTileIndex(weather.iconCode());
 
             // Icon aus Sprite Sheet zeichnen (zentriert in der Spalte)
-            // Hintergrundpixel (weiß/hell) werden transparent behandelt
             int iconX = dayX + (dayWidth - WEATHER_TILE_WIDTH) / 2;
             int srcX = tileIndex * WEATHER_TILE_WIDTH;
-            drawWeatherTile(graphics, spriteSheet, srcX, 0, iconX, y, WEATHER_TILE_WIDTH, WEATHER_TILE_HEIGHT);
+            int iconY = y + 18;
+            drawWeatherTile(graphics, spriteSheet, srcX, 0, iconX, iconY, WEATHER_TILE_WIDTH, WEATHER_TILE_HEIGHT);
 
-            // Temperatur unterhalb des Icons
-            FontHelper.drawString(graphics, weather.temperatureDisplay(), Aligment.CENTER,
-                    terminalFont.get(), 12, COLOR_RED, dayX, y + WEATHER_TILE_HEIGHT + 8, dayWidth, 14);
+            // Temperatur unterhalb des Icons – nur die jeweilige Extremtemperatur rot
+            int tempY = iconY + WEATHER_TILE_HEIGHT + 4;
+            drawTemperature(graphics, weather, dayX, tempY, dayWidth);
         }
+    }
+
+    /**
+     * Zeichnet die Min/Max-Temperatur zentriert in der Spalte.
+     * Nur der jeweilige Extremwert wird rot gefärbt (min < 3° oder max > 30°).
+     */
+    private void drawTemperature(Graphics2D graphics, WeatherDay weather, int dayX, int y, int dayWidth) {
+        Font font = terminalFont.get().deriveFont(12f);
+        graphics.setFont(font);
+        FontMetrics fm = graphics.getFontMetrics();
+
+        String minStr = String.valueOf(weather.minTemp());
+        String separator = " / ";
+        String maxStr = String.valueOf(weather.maxTemp());
+
+        int totalWidth = fm.stringWidth(minStr + separator + maxStr);
+        int startX = dayX + (dayWidth - totalWidth) / 2;
+
+        // Min-Temperatur
+        Color minColor = weather.minTemp() < 3 ? COLOR_RED : COLOR_BLACK;
+        graphics.setColor(minColor);
+        graphics.drawString(minStr, startX, y);
+        startX += fm.stringWidth(minStr);
+
+        // Separator
+        graphics.setColor(COLOR_BLACK);
+        graphics.drawString(separator, startX, y);
+        startX += fm.stringWidth(separator);
+
+        // Max-Temperatur
+        Color maxColor = weather.maxTemp() > 30 ? COLOR_RED : COLOR_BLACK;
+        graphics.setColor(maxColor);
+        graphics.drawString(maxStr, startX, y);
     }
 
     private int getWeatherTileIndex(String iconCode) {
