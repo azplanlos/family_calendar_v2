@@ -67,12 +67,38 @@ public interface IcalMapping {
         if (url != null && !url.isBlank()) {
             return url;
         }
+        // Fallback: URL aus DESCRIPTION extrahieren
+        String description = vEvent.getProperty("DESCRIPTION")
+                .map(p -> p.getValue())
+                .orElse(null);
+        if (description != null && !description.isBlank()) {
+            String extracted = extractUrlFromText(description);
+            if (extracted != null) {
+                return extracted;
+            }
+        }
         // Fallback: Wenn keine URL vorhanden, aber eine LOCATION, Google Maps-Link generieren
         String location = vEvent.getProperty("LOCATION")
                 .map(p -> p.getValue())
                 .orElse(null);
         if (location != null && !location.isBlank()) {
             return "https://www.google.com/maps/search/?api=1&query=" + java.net.URLEncoder.encode(location, java.nio.charset.StandardCharsets.UTF_8);
+        }
+        return null;
+    }
+
+    /**
+     * Extrahiert die erste URL (http/https) aus einem Text.
+     */
+    default String extractUrlFromText(String text) {
+        if (text == null || text.isBlank()) {
+            return null;
+        }
+        java.util.regex.Matcher matcher = java.util.regex.Pattern
+                .compile("https?://[^\\s<>\"'\\]\\)]+")
+                .matcher(text);
+        if (matcher.find()) {
+            return matcher.group();
         }
         return null;
     }
