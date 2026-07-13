@@ -13,20 +13,20 @@ A serverless family calendar system that renders events, weather, and a monthly 
 │  EventBridge (every 6h)                                     │
 │       │                                                     │
 │       ▼                                                     │
-│  ┌─────────────────────┐      ┌────────────────────┐       │
-│  │ CreateKalenderImage │─────▶│   S3 Bucket        │       │
-│  │ (Lambda Handler)    │      │  - calendar.png    │       │
-│  │                     │      │  - calendar.bin    │       │
-│  └─────────────────────┘      └────────────────────┘       │
+│  ┌─────────────────────┐      ┌────────────────────┐        │
+│  │ CreateKalenderImage │────▶ │   S3 Bucket        │       │
+│  │ (Lambda Handler)    │      │  - calendar.png    │        │
+│  │                     │      │  - calendar.bin    │        │
+│  └─────────────────────┘      └────────────────────┘        │
 │       │  Fetches:                       ▲                   │
 │       │  - iCal feeds                   │                   │
 │       │  - OpenWeatherMap               │                   │
 │       │  - Holidays (jollyday)          │                   │
 │       │                                 │                   │
-│  ┌─────────────────────┐               │                   │
-│  │ ServeCalendarImage  │───────────────┘                   │
-│  │ (Lambda Func. URL)  │  Reads calendar.bin from S3       │
-│  └─────────────────────┘                                   │
+│  ┌─────────────────────┐                │                   │
+│  │ ServeCalendarImage  │ ───────────────┘                   │
+│  │ (Lambda Func. URL)  │  Reads calendar.bin from S3        │
+│  └─────────────────────┘                                    │
 │            ▲                                                │
 └────────────┼────────────────────────────────────────────────┘
              │ HTTPS (Bearer Token)
@@ -45,7 +45,7 @@ A serverless family calendar system that renders events, weather, and a monthly 
 │            │                       │
 │  ┌─────────┴────────────────┐      │
 │  │ 7.5" E-Ink Display       │      │
-│  │ 800x480, 3-color (BWR)  │      │
+│  │ 800x480, 3-color (BWR)   │      │
 │  └──────────────────────────┘      │
 └────────────────────────────────────┘
 ```
