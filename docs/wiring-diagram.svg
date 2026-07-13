@@ -1,0 +1,175 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" font-family="monospace" font-size="12">
+  <!-- Background -->
+  <rect width="900" height="520" fill="#f8f9fa" rx="8"/>
+  
+  <!-- Title -->
+  <text x="450" y="30" text-anchor="middle" font-size="18" font-weight="bold" fill="#333">Family Calendar v2 — Wiring Diagram</text>
+  <text x="450" y="50" text-anchor="middle" font-size="11" fill="#666">LOLIN S3 Pro (ESP32-S3) → Waveshare 7.5" E-Ink (3-color, 800x480)</text>
+
+  <!-- LOLIN S3 Pro Board -->
+  <rect x="80" y="80" width="260" height="380" rx="12" fill="#2d5016" stroke="#1a3a0a" stroke-width="2"/>
+  <rect x="90" y="90" width="240" height="360" rx="8" fill="#3d6b1f" stroke="#2d5016" stroke-width="1"/>
+  
+  <!-- Board Label -->
+  <text x="210" y="115" text-anchor="middle" font-size="14" font-weight="bold" fill="white">LOLIN S3 Pro</text>
+  <text x="210" y="132" text-anchor="middle" font-size="10" fill="#cde6b8">ESP32-S3 / 16MB Flash</text>
+
+  <!-- USB-C Connector -->
+  <rect x="185" y="75" width="50" height="18" rx="4" fill="#555" stroke="#333" stroke-width="1"/>
+  <text x="210" y="88" text-anchor="middle" font-size="8" fill="white">USB-C</text>
+
+  <!-- Battery Connector (JST) -->
+  <rect x="95" y="430" width="40" height="14" rx="3" fill="#f5f5dc" stroke="#999" stroke-width="1"/>
+  <text x="115" y="440" text-anchor="middle" font-size="7" fill="#333">JST</text>
+
+  <!-- Pin Header (right side) -->
+  <rect x="320" y="150" width="16" height="260" rx="2" fill="#222" stroke="#111" stroke-width="1"/>
+  
+  <!-- GPIO Pin Labels on board -->
+  <circle cx="328" cy="170" r="4" fill="#ffcc00"/>
+  <text x="310" y="174" text-anchor="end" font-size="9" fill="white">3V3</text>
+  
+  <circle cx="328" cy="200" r="4" fill="#333"/>
+  <text x="310" y="204" text-anchor="end" font-size="9" fill="white">GND</text>
+  
+  <circle cx="328" cy="235" r="4" fill="#4488ff"/>
+  <text x="310" y="239" text-anchor="end" font-size="9" fill="white">GPIO11</text>
+  
+  <circle cx="328" cy="265" r="4" fill="#ffdd44"/>
+  <text x="310" y="269" text-anchor="end" font-size="9" fill="white">GPIO12</text>
+  
+  <circle cx="328" cy="295" r="4" fill="#ff8800"/>
+  <text x="310" y="299" text-anchor="end" font-size="9" fill="white">GPIO39</text>
+  
+  <circle cx="328" cy="325" r="4" fill="#44bb44"/>
+  <text x="310" y="329" text-anchor="end" font-size="9" fill="white">GPIO40</text>
+  
+  <circle cx="328" cy="355" r="4" fill="#dddddd"/>
+  <text x="310" y="359" text-anchor="end" font-size="9" fill="white">GPIO41</text>
+  
+  <circle cx="328" cy="385" r="4" fill="#aa44dd"/>
+  <text x="310" y="389" text-anchor="end" font-size="9" fill="white">GPIO42</text>
+
+  <!-- GPIO3 ADC (left side, for battery) -->
+  <circle cx="95" cy="390" r="4" fill="#888"/>
+  <text x="110" y="394" text-anchor="start" font-size="9" fill="white">GPIO3 (ADC)</text>
+
+  <!-- Waveshare E-Ink Display -->
+  <rect x="560" y="100" width="280" height="360" rx="6" fill="#f0f0f0" stroke="#999" stroke-width="2"/>
+  <rect x="575" y="130" width="250" height="150" rx="4" fill="white" stroke="#ccc" stroke-width="1"/>
+  
+  <!-- Display content hint -->
+  <text x="700" y="175" text-anchor="middle" font-size="10" fill="#999">800 x 480 px</text>
+  <text x="700" y="192" text-anchor="middle" font-size="10" fill="#999">3-color (B/W/R)</text>
+  <rect x="620" y="200" width="60" height="8" rx="2" fill="#333"/>
+  <rect x="690" y="200" width="40" height="8" rx="2" fill="#cc0000"/>
+  <rect x="620" y="215" width="80" height="6" rx="2" fill="#333"/>
+  <rect x="620" y="228" width="50" height="6" rx="2" fill="#333"/>
+
+  <!-- Display Label -->
+  <text x="700" y="120" text-anchor="middle" font-size="13" font-weight="bold" fill="#333">Waveshare 7.5" E-Ink</text>
+
+  <!-- Display HAT Connector -->
+  <rect x="565" y="300" width="16" height="140" rx="2" fill="#222" stroke="#111" stroke-width="1"/>
+
+  <!-- Display Pin Labels -->
+  <circle cx="573" cy="315" r="4" fill="#ffcc00"/>
+  <text x="590" y="319" font-size="9" fill="#333">VCC</text>
+  
+  <circle cx="573" cy="340" r="4" fill="#333"/>
+  <text x="590" y="344" font-size="9" fill="#333">GND</text>
+  
+  <circle cx="573" cy="365" r="4" fill="#4488ff"/>
+  <text x="590" y="369" font-size="9" fill="#333">DIN (MOSI)</text>
+  
+  <circle cx="573" cy="390" r="4" fill="#ffdd44"/>
+  <text x="590" y="394" font-size="9" fill="#333">CLK (SCLK)</text>
+  
+  <circle cx="573" cy="415" r="4" fill="#ff8800"/>
+  <text x="590" y="419" font-size="9" fill="#333">CS</text>
+
+  <circle cx="573" cy="320" r="4" fill="#ffcc00"/>
+  
+  <!-- Additional display pins below -->
+  <rect x="660" y="300" width="16" height="140" rx="2" fill="#222" stroke="#111" stroke-width="1"/>
+  
+  <circle cx="668" cy="315" r="4" fill="#44bb44"/>
+  <text x="685" y="319" font-size="9" fill="#333">DC</text>
+  
+  <circle cx="668" cy="340" r="4" fill="#dddddd"/>
+  <text x="685" y="344" font-size="9" fill="#333">RST</text>
+  
+  <circle cx="668" cy="365" r="4" fill="#aa44dd"/>
+  <text x="685" y="369" font-size="9" fill="#333">BUSY</text>
+
+  <!-- Jumper Wires -->
+  <!-- VCC (Red) -->
+  <path d="M 332 170 C 420 170, 450 315, 569 315" stroke="#ff3333" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  
+  <!-- GND (Black) -->
+  <path d="M 332 200 C 420 200, 450 340, 569 340" stroke="#333333" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  
+  <!-- MOSI - GPIO11 (Blue) -->
+  <path d="M 332 235 C 430 235, 460 365, 569 365" stroke="#4488ff" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  
+  <!-- SCLK - GPIO12 (Yellow) -->
+  <path d="M 332 265 C 440 265, 460 390, 569 390" stroke="#ddaa00" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  
+  <!-- CS - GPIO39 (Orange) -->
+  <path d="M 332 295 C 440 295, 470 415, 569 415" stroke="#ff8800" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  
+  <!-- DC - GPIO40 (Green) -->
+  <path d="M 332 325 C 450 325, 530 315, 664 315" stroke="#44bb44" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  
+  <!-- RST - GPIO41 (White/Gray) -->
+  <path d="M 332 355 C 450 355, 540 340, 664 340" stroke="#aaaaaa" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  
+  <!-- BUSY - GPIO42 (Purple) -->
+  <path d="M 332 385 C 450 385, 540 365, 664 365" stroke="#aa44dd" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+
+  <!-- Battery -->
+  <rect x="30" y="445" width="70" height="35" rx="4" fill="#ffeecc" stroke="#cc8800" stroke-width="1.5"/>
+  <rect x="100" y="455" width="6" height="15" rx="2" fill="#cc8800"/>
+  <text x="65" y="463" text-anchor="middle" font-size="9" font-weight="bold" fill="#886600">LiPo</text>
+  <text x="65" y="475" text-anchor="middle" font-size="8" fill="#886600">3.7V</text>
+  
+  <!-- Battery wire to JST -->
+  <path d="M 100 462 L 115 450 L 115 444" stroke="#cc0000" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M 100 468 L 130 455 L 130 444" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>
+
+  <!-- ADC connection hint -->
+  <path d="M 95 394 L 65 394 L 65 430" stroke="#888" stroke-width="1" fill="none" stroke-dasharray="3,2"/>
+  <text x="50" y="420" font-size="7" fill="#666">ADC</text>
+
+  <!-- Legend -->
+  <rect x="30" y="65" width="40" height="3" fill="#ff3333"/>
+  <text x="75" y="70" font-size="9" fill="#555">3V3 (Red)</text>
+  
+  <rect x="150" y="65" width="40" height="3" fill="#333"/>
+  <text x="195" y="70" font-size="9" fill="#555">GND (Black)</text>
+  
+  <rect x="270" y="65" width="40" height="3" fill="#4488ff"/>
+  <text x="315" y="70" font-size="9" fill="#555">MOSI (Blue)</text>
+  
+  <rect x="400" y="65" width="40" height="3" fill="#ddaa00"/>
+  <text x="445" y="70" font-size="9" fill="#555">SCLK (Yellow)</text>
+
+  <rect x="545" y="65" width="40" height="3" fill="#ff8800"/>
+  <text x="590" y="70" font-size="9" fill="#555">CS (Orange)</text>
+  
+  <rect x="660" y="65" width="40" height="3" fill="#44bb44"/>
+  <text x="705" y="70" font-size="9" fill="#555">DC (Green)</text>
+  
+  <rect x="30" y="78" width="40" height="3" fill="#aaa"/>
+  <text x="75" y="83" font-size="9" fill="#555">RST (White)</text>
+  
+  <rect x="150" y="78" width="40" height="3" fill="#aa44dd"/>
+  <text x="195" y="83" font-size="9" fill="#555">BUSY (Purple)</text>
+
+  <!-- SPI Bus Label -->
+  <text x="445" y="260" text-anchor="middle" font-size="10" font-weight="bold" fill="#555">HSPI Bus</text>
+  <text x="445" y="274" text-anchor="middle" font-size="9" fill="#888">(Jumper Wires)</text>
+
+  <!-- Footer -->
+  <text x="450" y="505" text-anchor="middle" font-size="9" fill="#999">No external resistors or additional components required.</text>
+</svg>
