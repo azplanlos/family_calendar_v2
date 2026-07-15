@@ -98,7 +98,7 @@ public class EventRepository {
             }
         }
 
-        this.allEvents = Collections.unmodifiableList(events);
+        this.allEvents = Collections.unmodifiableList(assignParticipantsToUnassigned(events));
         this.errors = Collections.unmodifiableList(errors);
     }
 
@@ -180,7 +180,7 @@ public class EventRepository {
             }
         }
 
-        this.allEvents = Collections.unmodifiableList(events);
+        this.allEvents = Collections.unmodifiableList(assignParticipantsToUnassigned(events));
         this.errors = Collections.unmodifiableList(errors);
     }
 
@@ -268,6 +268,42 @@ public class EventRepository {
      */
     public List<String> getErrors() {
         return errors;
+    }
+
+    /**
+     * Weist Events ohne Teilnehmer alle bekannten Familienmitglieder zu.
+     * Die Familienmitglieder werden aus den Events ermittelt, die bereits Teilnehmer haben.
+     */
+    private List<Event> assignParticipantsToUnassigned(List<Event> events) {
+        List<String> allParticipants = events.stream()
+                .map(Event::participants)
+                .filter(java.util.Objects::nonNull)
+                .flatMap(List::stream)
+                .filter(p -> p != null && !p.isBlank())
+                .distinct()
+                .sorted()
+                .toList();
+
+        if (allParticipants.isEmpty()) {
+            return events;
+        }
+
+        return events.stream()
+                .map(event -> {
+                    if (event.participants() == null || event.participants().isEmpty()) {
+                        return new Event(
+                                allParticipants,
+                                event.startTime(),
+                                event.endTime(),
+                                event.summary(),
+                                event.color(),
+                                event.source(),
+                                event.url()
+                        );
+                    }
+                    return event;
+                })
+                .toList();
     }
 
     private boolean eventOverlapsRange(Event event, ZonedDateTime rangeStart, ZonedDateTime rangeEnd) {
