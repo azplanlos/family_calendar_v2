@@ -186,22 +186,69 @@ public class EventRepository {
 
     /**
      * Gibt alle Events zurück, die an einem bestimmten Tag stattfinden.
-     * Events vom Vortag, die über Mitternacht hinausgehen und am angefragten Tag
-     * länger als bis 08:00 dauern, werden mit Startzeit 00:00 des Tages angezeigt.
-     * Events vom Vortag, die vor 08:00 enden, werden nicht angezeigt.
+     *
+     * Mehrtägige getimte Events (z.B. 15.07. 10:00 – 18.07. 09:00) werden wie folgt behandelt:
+     * - Starttag (15.07.): mit Startzeit anzeigen (10:00)
+     * - Zwischentage (16./17.07.): als ganztägig rendern (00:00–00:00), da der Tag komplett enthalten ist
+     * - Endtag (18.07.): mit Startzeit 00:00 und Endzeit anzeigen (09:00)
+     *
+     * Eintägige Übernacht-Events (enden vor nächstem Mitternacht):
+     * - Nur anzeigen wenn sie nach 08:00 am Folgetag enden
      */
     public List<Event> getEventsForDay(LocalDate day) {
         LocalDateTime dayStart = day.atStartOfDay();
+        LocalDateTime dayEnd = day.plusDays(1).atStartOfDay();
         LocalDateTime threshold = day.atTime(8, 0);
 
         List<Event> result = new ArrayList<>();
 
         for (Event event : getEventsForRange(day, day)) {
             if (event.startTime() == null) continue;
-            LocalDate eventStartDate = event.startTime().toLocalDate();
 
-            if (eventStartDate.isBefore(day) && !isAllDayEvent(event)) {
-                // Übernacht-Event: nur aufnehmen wenn es nach 08:00 am Tag endet
+            // Bereits ganztägige Events (00:00/00:00) unverändert übernehmen
+            if (isAllDayEvent(event)) {
+                result.add(event);
+                continue;
+            }
+
+            LocalDate eventStartDate = event.startTime().toLocalDate();
+            LocalDate eventEndDate = event.endTime() != null ? event.endTime().toLocalDate() : eventStartDate;
+
+            // Prüfen ob das Event mehrtägig ist (mehr als 1 Kalendertag)
+            boolean isMultiDay = event.endTime() != null && eventEndDate.isAfter(eventStartDate);
+
+            if (!isMultiDay) {
+                // Eintägiges Event: normal anzeigen
+                result.add(event);
+            } else if (eventStartDate.equals(day)) {
+                // Starttag eines mehrtägigen Events: mit Original-Startzeit anzeigen
+                result.add(event);
+            } else if (eventEndDate.equals(day)) {
+                // Endtag eines mehrtägigen Events: von 00:00 bis Endzeit anzeigen
+                if (event.endTime().isAfter(dayStart)) {
+                    result.add(new Event(
+                            event.participants(),
+                            dayStart,
+                            event.endTime(),
+                            event.summary(),
+                            event.color(),
+                            event.source(),
+                            event.url()
+                    ));
+                }
+            } else if (eventStartDate.isBefore(day) && eventEndDate.isAfter(day)) {
+                // Zwischentag: Tag ist komplett enthalten → als ganztägig rendern (00:00–00:00)
+                result.add(new Event(
+                        event.participants(),
+                        dayStart,
+                        dayEnd,
+                        event.summary(),
+                        event.color(),
+                        event.source(),
+                        event.url()
+                ));
+            } else if (eventStartDate.isBefore(day)) {
+                // Sonstige Übernacht-Events: nur anzeigen wenn nach 08:00 endend
                 if (event.endTime() != null && event.endTime().isAfter(threshold)) {
                     result.add(new Event(
                             event.participants(),
@@ -213,14 +260,11 @@ public class EventRepository {
                             event.url()
                     ));
                 }
-                // Sonst: nicht anzeigen (endet vor 08:00)
-            } else {
-                result.add(event);
             }
         }
 
         return result.stream()
-                .sorted(Comparator.comparing(Event::startTime, Comparator.nullsLast(Comparator.naturalOrder())))
+                .sorted(Comparator.comparing(event -> event.startTime(), Comparator.nullsLast(Comparator.naturalOrder())))
                 .toList();
     }
 
@@ -242,7 +286,7 @@ public class EventRepository {
 
         return allEvents.stream()
                 .filter(event -> eventOverlapsRange(event, rangeStart, rangeEnd))
-                .sorted(Comparator.comparing(Event::startTime, Comparator.nullsLast(Comparator.naturalOrder())))
+                .sorted(Comparator.comparing(event -> event.startTime(), Comparator.nullsLast(Comparator.naturalOrder())))
                 .toList();
     }
 
@@ -253,7 +297,7 @@ public class EventRepository {
      */
     public List<String> getAllParticipants() {
         return allEvents.stream()
-                .map(Event::participants)
+                .map(event -> event.participants())
                 .filter(java.util.Objects::nonNull)
                 .flatMap(List::stream)
                 .filter(p -> p != null && !p.isBlank())
@@ -273,10 +317,12 @@ public class EventRepository {
     /**
      * Weist Events ohne Teilnehmer alle bekannten Familienmitglieder zu.
      * Die Familienmitglieder werden aus den Events ermittelt, die bereits Teilnehmer haben.
+     * Diese Zuweisung gilt nur für Events aus dem Familienkalender (CALENDAR),
+     * nicht für Schulkalender, Ferien oder Feiertage.
      */
     private List<Event> assignParticipantsToUnassigned(List<Event> events) {
         List<String> allParticipants = events.stream()
-                .map(Event::participants)
+                .map(event -> event.participants())
                 .filter(java.util.Objects::nonNull)
                 .flatMap(List::stream)
                 .filter(p -> p != null && !p.isBlank())
@@ -289,8 +335,9 @@ public class EventRepository {
         }
 
         return events.stream()
-                .map(event -> {
-                    if (event.participants() == null || event.participants().isEmpty()) {
+                .<Event>map(event -> {
+                    if (EventSource.CALENDAR.equals(event.source())
+                            && (event.participants() == null || event.participants().isEmpty())) {
                         return new Event(
                                 allParticipants,
                                 event.startTime(),
@@ -303,7 +350,7 @@ public class EventRepository {
                     }
                     return event;
                 })
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private boolean eventOverlapsRange(Event event, ZonedDateTime rangeStart, ZonedDateTime rangeEnd) {
