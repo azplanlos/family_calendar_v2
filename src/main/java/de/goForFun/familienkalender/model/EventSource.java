@@ -11,5 +11,7 @@ public enum EventSource {
     /** Event aus dem Schulkalender */
     SCHOOL,
     /** Schulferien (z.B. von schulferien.org) */
-    VACATION
+    VACATION,
+    /** Event aus dem Wechselmodell-Feed (Betreuungs-Event) */
+    CUSTODY
 }

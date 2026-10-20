@@ -4,7 +4,9 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.LambdaLogger;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.ScheduledEvent;
+import de.goForFun.familienkalender.model.CareDay;
 import de.goForFun.familienkalender.model.Event;
+import de.goForFun.familienkalender.model.EventSource;
 import de.goForFun.familienkalender.model.RenderData;
 import de.goForFun.familienkalender.model.WeatherDay;
 import net.fortuna.ical4j.data.ParserException;
@@ -21,7 +23,10 @@ import java.net.URI;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 /**
  * AWS Lambda Handler – orchestriert Kalender-Download, Parsing und Bilderstellung.
@@ -34,6 +39,8 @@ public class CreateKalenderImage implements RequestHandler<ScheduledEvent, Void>
     private static final String CALENDAR_FEED = System.getenv("CALENDAR_FEED");
     private static final String SCHOOL_CALENDAR_FEED = System.getenv("SCHOOL_CALENDAR_FEED");
     private static final String VACATION_CALENDAR_FEED = System.getenv("VACATION_CALENDAR_FEED");
+    private static final String CUSTODY_CALENDAR_FEED = System.getenv("CUSTODY_CALENDAR_FEED");
+    private static final String CUSTODY_MALE_MATCH = System.getenv("CUSTODY_MALE_MATCH");
     private static final String HOLIDAY_COUNTRY = System.getenv("HOLIDAY_COUNTRY") != null
             ? System.getenv("HOLIDAY_COUNTRY") : "de";
     private static final String HOLIDAY_STATE = System.getenv("HOLIDAY_STATE") != null
@@ -81,10 +88,31 @@ public class CreateKalenderImage implements RequestHandler<ScheduledEvent, Void>
             List<WeatherDay> weatherDays = weatherService.fetchForecast();
             logger.log("Weather forecast: " + weatherDays.size() + " days loaded");
 
-            RenderData renderData = new RenderData(now, todayEvents, tomorrowEvents, weatherDays, calendarEvents, participants, eventRepository.getErrors());
+            // Wechselmodell-Kalender (Custody) – optional, still inaktiv ohne gültigen Feed
+            Map<LocalDate, CareDay> custodySchedule = Map.of();
+            List<String> errors = new ArrayList<>(eventRepository.getErrors());
 
-            // Feed-Fehler loggen
-            for (String error : eventRepository.getErrors()) {
+            URI custodyUri = parseHttpUri(CUSTODY_CALENDAR_FEED);   // null wenn fehlt/leer/ungültig/kein http(s)
+            if (custodyUri != null) {                                // R1.2 aktiv
+                if (CUSTODY_MALE_MATCH == null || CUSTODY_MALE_MATCH.isBlank()) {
+                    errors.add("Wechselmodell: Umgebungsvariable CUSTODY_MALE_MATCH fehlt oder ist leer"); // R2.2
+                } else {
+                    try {
+                        List<Event> custodyEvents =
+                                new IcalParser().parse(custodyUri, calendarStart, calendarEnd, EventSource.CUSTODY); // R3.1
+                        custodySchedule = new CareScheduleProvider(custodyEvents, CUSTODY_MALE_MATCH).buildSchedule();
+                    } catch (IOException | ParserException e) {
+                        errors.add("Wechselmodell-Feed: " + e.getMessage());   // R3.6
+                    }
+                }
+            }
+            // R1.3: custodyUri == null -> schedule leer, KEIN Fehler
+
+            RenderData renderData = new RenderData(now, todayEvents, tomorrowEvents, weatherDays,
+                    calendarEvents, participants, errors, custodySchedule);
+
+            // Feed-Fehler loggen (inkl. Custody-Fehler)
+            for (String error : errors) {
                 logger.log("FEED ERROR: " + error);
             }
 
@@ -123,5 +151,28 @@ public class CreateKalenderImage implements RequestHandler<ScheduledEvent, Void>
             throw new RuntimeException(e);
         }
         return null;
+    }
+
+    /**
+     * Validiert eine Feed-URL syntaktisch (R1.2/R1.3).
+     *
+     * @param s roher URL-String aus der Umgebungsvariable (darf null sein)
+     * @return die URI, falls {@code s} eine nicht-leere, syntaktisch gültige http/https-URL
+     *         mit nicht-leerem Host ist; andernfalls {@code null}. Wirft nie.
+     */
+    private static URI parseHttpUri(String s) {
+        if (s == null || s.isBlank()) return null;
+        try {
+            URI u = URI.create(s.trim());
+            String scheme = u.getScheme();
+            if (scheme == null) return null;
+            scheme = scheme.toLowerCase(Locale.ROOT);
+            if ((scheme.equals("http") || scheme.equals("https")) && u.getHost() != null && !u.getHost().isBlank()) {
+                return u;
+            }
+            return null;
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 }

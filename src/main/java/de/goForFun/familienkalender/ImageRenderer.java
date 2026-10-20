@@ -6,6 +6,8 @@ import com.google.zxing.EncodeHintType;
 import com.google.zxing.WriterException;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
+import de.goForFun.familienkalender.model.CareDay;
+import de.goForFun.familienkalender.model.CareParty;
 import de.goForFun.familienkalender.model.Event;
 import de.goForFun.familienkalender.model.EventSource;
 import de.goForFun.familienkalender.model.RenderData;
@@ -108,9 +110,9 @@ public class ImageRenderer {
         LocalDate today = data.now().toLocalDate();
 
         drawHeader(data.now(), graphics);
-        drawDayColumns(today, data.todayEvents(), data.tomorrowEvents(), graphics);
+        drawDayColumns(today, data.todayEvents(), data.tomorrowEvents(), data.custodySchedule(), graphics);
         drawWeatherForecast(today, data.weatherDays(), graphics);
-        drawMonthCalendar(today, data.calendarEvents(), data.participants(), graphics);
+        drawMonthCalendar(today, data.calendarEvents(), data.participants(), data.custodySchedule(), graphics);
         drawErrors(data.errors(), graphics);
         drawFooter(data.now(), graphics);
 
@@ -131,7 +133,8 @@ public class ImageRenderer {
 
     // ========== DAY COLUMNS (Heute / Morgen) ==========
 
-    private void drawDayColumns(LocalDate today, List<Event> todayEvents, List<Event> tomorrowEvents, Graphics2D graphics) {
+    private void drawDayColumns(LocalDate today, List<Event> todayEvents, List<Event> tomorrowEvents,
+                                Map<LocalDate, CareDay> custodySchedule, Graphics2D graphics) {
         // Finde ganztägige Events, die sowohl heute als auch morgen aktiv sind (durchgängig rendern)
         LocalDate tomorrow = today.plusDays(1);
         List<Event> spanningAllDayEvents = todayEvents.stream()
@@ -159,8 +162,8 @@ public class ImageRenderer {
                 .toList();
 
         // QR-Codes für Events mit URL am unteren Rand der Tagesansicht
-        int todayEndY = drawDayColumn(graphics, today, todayNonSpanning, TODAY_COL_X, TODAY_COL_WIDTH, "Heute", eventY);
-        int tomorrowEndY = drawDayColumn(graphics, tomorrow, tomorrowNonSpanning, TOMORROW_COL_X, TOMORROW_COL_WIDTH, "Morgen", eventY);
+        int todayEndY = drawDayColumn(graphics, today, todayNonSpanning, TODAY_COL_X, TODAY_COL_WIDTH, "Heute", eventY, custodySchedule);
+        int tomorrowEndY = drawDayColumn(graphics, tomorrow, tomorrowNonSpanning, TOMORROW_COL_X, TOMORROW_COL_WIDTH, "Morgen", eventY, custodySchedule);
         int maxEndY = Math.max(todayEndY, tomorrowEndY);
         drawQrCodes(todayEvents, tomorrowEvents, maxEndY, graphics);
     }
@@ -200,13 +203,30 @@ public class ImageRenderer {
         };
     }
 
-    private int drawDayColumn(Graphics2D graphics, LocalDate day, List<Event> events, int x, int width, String label, int spanningEndY) {
+    private int drawDayColumn(Graphics2D graphics, LocalDate day, List<Event> events, int x, int width, String label, int spanningEndY,
+                              Map<LocalDate, CareDay> custodySchedule) {
         Locale locale = Locale.GERMAN;
         String dayName = day.getDayOfWeek().getDisplayName(TextStyle.FULL, locale);
         String headerText = String.format("%s (%s)", label, dayName);
 
+        // Betreuungs-Icon (R5): maßgebliche Partei für diesen Tag ermitteln
+        CareDay cd = custodySchedule != null ? custodySchedule.get(day) : null;
+        CareParty iconParty = (cd != null) ? cd.iconParty() : null; // R5.3/R5.4 via CareDay.iconParty()
+
         // Column header (vertikal zentriert zwischen Trennlinie und erstem Event)
-        FontHelper.drawString(graphics, headerText, Aligment.RIGHT, titleFont.get(), 16, COLOR_BLACK, x, DAY_EVENTS_Y_START + 5, width, 16);
+        if (iconParty != null) {
+            // Icon auf derselben Zeile wie der Wochentag, am Ende (rechter Spaltenrand);
+            // Überschrift rechtsbündig in den um die Iconbreite verkürzten Bereich (R5.1/R5.2/R5.8).
+            int icon = 16;
+            int iconX = x + width - icon;
+            int iconTop = DAY_EVENTS_Y_START - 9; // vertikal mittig zur ~16px-Überschriftzeile (Baseline DAY_EVENTS_Y_START+5)
+            int headerWidth = width - (icon + 4);
+            FontHelper.drawString(graphics, headerText, Aligment.RIGHT, titleFont.get(), 16, COLOR_BLACK, x, DAY_EVENTS_Y_START + 5, headerWidth, 16);
+            drawCareIcon(graphics, iconParty, iconX, iconTop, icon);
+        } else {
+            // Kein Icon – Überschrift unverändert über die volle Breite (R5.9)
+            FontHelper.drawString(graphics, headerText, Aligment.RIGHT, titleFont.get(), 16, COLOR_BLACK, x, DAY_EVENTS_Y_START + 5, width, 16);
+        }
 
         // Separate all-day events and timed events
         List<Event> allDayEvents = sortAllDayEvents(events.stream().filter(this::isAllDay).toList());
@@ -623,7 +643,8 @@ public class ImageRenderer {
 
     // ========== WEEK CALENDAR (5 weeks) ==========
 
-    private void drawMonthCalendar(LocalDate today, List<Event> calendarEvents, List<String> participants, Graphics2D graphics) {
+    private void drawMonthCalendar(LocalDate today, List<Event> calendarEvents, List<String> participants,
+                                   Map<LocalDate, CareDay> custodySchedule, Graphics2D graphics) {
         int y = CALENDAR_Y;
 
         // Calculate cell width so that right edge of grid aligns with RIGHT_EDGE
@@ -687,6 +708,10 @@ public class ImageRenderer {
                     if (col >= 5 && !day.equals(today)) {
                         fillDitheredLight(graphics, cellX + 1, cellY + 1, cellWidth - 1, cellHeight - 1, COLOR_BLACK);
                     }
+
+                    // Wechselmodell: Mann-Tag-Rasterung VOR Tageszahl/Rahmen (R6), Heute-Zelle wird
+                    // in der Methode selbst übersprungen (R6.7). Reservierte Balkenzonen bleiben frei (R6.8).
+                    drawCustodyHighlight(graphics, day, cellX, cellY, cellWidth, cellHeight, custodySchedule, today, participants);
 
                     // Highlight today: red dithered background, red text
                     if (day.equals(today)) {
@@ -844,7 +869,151 @@ public class ImageRenderer {
         return event.startTime().isBefore(dayEnd) && eventEnd.isAfter(dayStart);
     }
 
+    // ========== CARE ICON (Wechselmodell) ==========
+
+    /**
+     * Zeichnet das Betreuungs-Piktogramm für das Wechselmodell am Ende der Tagesüberschrift.
+     * Ausschließlich in COLOR_RED (MANN) bzw. COLOR_BLACK (FRAU) – keine Graustufen,
+     * kein Antialiasing-Grau (R5.7). WC-Schild-Symbolik mit gemeinsamem Kopf:
+     * Mann als Hosen-Figur (Rumpf + zwei getrennte Beine), Frau als Kleid-Figur
+     * (nach unten breiter werdendes Dreieckskleid).
+     *
+     * @param party betreuende Partei für diesen Tag
+     * @param bx    linke obere Ecke X der Icon-Box
+     * @param by    linke obere Ecke Y der Icon-Box
+     * @param size  Kantenlänge der quadratischen Icon-Box (16)
+     */
+    private void drawCareIcon(Graphics2D g, CareParty party, int bx, int by, int size) {
+        int cx = bx + size / 2;
+        g.setColor(party == CareParty.MANN ? COLOR_RED : COLOR_BLACK);
+
+        // Gemeinsamer Kopf: gefüllter Kreis, oben zentriert (wie auf WC-Schildern)
+        int headR = Math.max(2, Math.round(size * 0.20f));
+        int headTop = by + 1;
+        g.fillOval(cx - headR, headTop, 2 * headR, 2 * headR);
+
+        int neckY = headTop + 2 * headR + 1;       // knapp unter dem Kopf
+        int bottom = by + size - 1;                // untere Kante der Icon-Box
+        if (bottom <= neckY) {
+            bottom = neckY + 1;
+        }
+
+        if (party == CareParty.MANN) {
+            // Mann (WC-Schild): Rumpf mit geraden Schultern + zwei getrennte Beine
+            // mit schmaler transparenter Mittel-Lücke (eindeutige Hosen-Figur).
+            int shoulderHalf = Math.max(2, Math.round(size * 0.28f));
+            int torsoBottom = neckY + Math.max(1, Math.round((bottom - neckY) * 0.55f));
+            g.fillRect(cx - shoulderHalf, neckY, 2 * shoulderHalf, torsoBottom - neckY);
+
+            int gapHalf = Math.max(1, Math.round(size * 0.05f)); // halbe Lückenbreite
+            int legOuter = shoulderHalf;                          // Beine so breit wie Schultern
+            int legHeight = bottom - torsoBottom;
+            if (legHeight > 0) {
+                // linkes Bein: von -legOuter bis -gapHalf
+                g.fillRect(cx - legOuter, torsoBottom, legOuter - gapHalf, legHeight);
+                // rechtes Bein: von +gapHalf bis +legOuter
+                g.fillRect(cx + gapHalf, torsoBottom, legOuter - gapHalf, legHeight);
+            }
+        } else {
+            // Frau (WC-Schild): nach unten breiter werdendes Dreieckskleid
+            // (schmale Schulter oben, deutlich breiterer Saum unten).
+            int topHalf = Math.max(2, Math.round(size * 0.16f)); // schmale Schulter
+            int botHalf = Math.max(topHalf + 2, Math.round(size * 0.36f)); // breiter Saum
+            int[] xs = {cx - topHalf, cx + topHalf, cx + botHalf, cx - botHalf};
+            int[] ys = {neckY,        neckY,        bottom,       bottom};
+            g.fillPolygon(xs, ys, 4);
+        }
+    }
+
     // ========== DITHERING HELPER ==========
+
+    /**
+     * Zeichnet die Mann-Tag-Rasterung für eine Monatskalenderzelle (R6).
+     *
+     * <p>Die Rasterung füllt den GESAMTEN Zellhintergrund; die Vollton-Indikatorbalken werden
+     * danach darübergelegt und überdecken die Schraffur in ihrer Zone vollständig (R6.8).</p>
+     *
+     * <ul>
+     *   <li>Heute-Zelle: keine Rasterung – die Heute-Hervorhebung dominiert (R6.7).</li>
+     *   <li>Kein {@link CareDay} für den Tag: keine Rasterung (R6.9).</li>
+     *   <li>Ganztag MANN: gesamte Zelle gerastert (R6.1); FRAU: nichts (R6.3).</li>
+     *   <li>Wechseltag: diagonale Teilung (unten-links -> oben-rechts) – oberes-linkes Dreieck
+     *       bei {@code firstHalf == MANN} (R6.5), unteres-rechtes Dreieck bei
+     *       {@code secondHalf == MANN} (R6.6).</li>
+     * </ul>
+     */
+    private void drawCustodyHighlight(Graphics2D g, LocalDate day, int cellX, int cellY, int cellWidth, int cellHeight,
+                                      Map<LocalDate, CareDay> schedule, LocalDate today, List<String> participants) {
+        if (day.equals(today)) return;                 // R6.7: Heute dominiert
+        CareDay cd = schedule != null ? schedule.get(day) : null;
+        if (cd == null) return;                         // R6.9
+
+        // Die Schraffur füllt den GESAMTEN Zellhintergrund (R6.1/R6.8). Die Vollton-
+        // Indikatorbalken werden in einer späteren Zeichenphase darübergelegt und überdecken
+        // die Schraffur in ihrer Zone vollständig – keine Zonen-Aussparung nötig (R6.8).
+        int innerX = cellX + 1;
+        int innerY = cellY + 1;
+        int innerW = cellWidth - 1;
+        int innerH = cellHeight - 1;
+        if (innerW <= 0 || innerH <= 0) return;         // Sicherheit für sehr kleine Zellen
+
+        if (cd.switchDay()) {                            // R6.4: diagonale Teilung (unten-links -> oben-rechts)
+            if (cd.firstHalf() == CareParty.MANN) {      // R6.5: oberes-linkes Dreieck
+                fillCustodyDitherTriangle(g, innerX, innerY, innerW, innerH, Triangle.UPPER_LEFT);
+            }
+            if (cd.secondHalf() == CareParty.MANN) {     // R6.6: unteres-rechtes Dreieck
+                fillCustodyDitherTriangle(g, innerX, innerY, innerW, innerH, Triangle.LOWER_RIGHT);
+            }
+        } else {                                         // R6.1 / R6.3
+            if (cd.fullDay() == CareParty.MANN) {
+                fillCustodyDither(g, innerX, innerY, innerW, innerH);   // ganze Zelle
+            }
+            // FRAU: nichts (0% der Zelle)
+        }
+    }
+
+    /** Dreieckshälfte einer diagonal geteilten Wechseltag-Zelle. */
+    private enum Triangle { UPPER_LEFT, LOWER_RIGHT }
+
+    /**
+     * Leichte Rasterfüllung ~11% (innerhalb 8–20%) in COLOR_RED für die Mann-Tag-Hervorhebung (R6.2).
+     * Gleichmäßiges Punktgitter mit identischem Abstand (3) horizontal wie vertikal – es wird
+     * jedes neunte Pixel gesetzt. Absolute Koordinaten, damit das Muster über Zellgrenzen nahtlos ist.
+     */
+    private void fillCustodyDither(Graphics2D g, int x, int y, int width, int height) {
+        g.setColor(COLOR_RED);
+        for (int py = y; py < y + height; py++) {
+            for (int px = x; px < x + width; px++) {
+                if ((px % 3 == 0) && (py % 3 == 0)) {
+                    g.fillRect(px, py, 1, 1);
+                }
+            }
+        }
+    }
+
+    /**
+     * Wie {@link #fillCustodyDither}, aber nur im oberen-linken ({@link Triangle#UPPER_LEFT})
+     * bzw. unteren-rechten ({@link Triangle#LOWER_RIGHT}) Dreieck der Zelle. Die Teilung erfolgt
+     * entlang der Diagonale von unten-links nach oben-rechts (R6.4): ein normierter Punkt
+     * {@code (u, v)} liegt im oberen-linken Dreieck, wenn {@code u + v < 1}. Beide Dreiecke sind
+     * disjunkt und ergeben zusammen die vollständig gerasterte Zelle.
+     */
+    private void fillCustodyDitherTriangle(Graphics2D g, int x, int y, int width, int height, Triangle tri) {
+        g.setColor(COLOR_RED);
+        for (int py = y; py < y + height; py++) {
+            for (int px = x; px < x + width; px++) {
+                if (!((px % 3 == 0) && (py % 3 == 0))) {
+                    continue;
+                }
+                double u = (px - x + 0.5) / width;
+                double v = (py - y + 0.5) / height;
+                boolean upperLeft = (u + v) < 1.0;
+                if ((tri == Triangle.UPPER_LEFT) == upperLeft) {
+                    g.fillRect(px, py, 1, 1);
+                }
+            }
+        }
+    }
 
     /**
      * Füllt einen Bereich mit einem Schachbrettmuster (50% Dithering) in der angegebenen Farbe.

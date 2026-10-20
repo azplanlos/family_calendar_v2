@@ -28,6 +28,23 @@
 # ----------------------------------------------------------------------------
 
 set -euf
+
+# --- helper functions (moved up: must be defined before first use) ---
+die() {
+  printf '%s\n' "$1" >&2
+  exit 1
+}
+
+verbose() {
+  [ "${MVNW_VERBOSE-}" != true ] || printf '%s\n' "$1"
+}
+
+concat_lines() {
+  if [ -f "$1" ]; then
+    tr -s '\r\n' '  ' < "$1"
+  fi
+}
+
 [ "${MVNW_VERBOSE-}" != true ] || set -x
 
 # OS specific support.
@@ -101,7 +118,7 @@ find_file_argument_basedir() {
 }
 
 MAVEN_PROJECTBASEDIR="${MAVEN_BASEDIR:-$(find_file_argument_basedir)}"
-MAVEN_OPTS="$(concat_lines "$MAVEN_PROJECTBASEDIR/.mvn/jvm.config") $MAVEN_OPTS"
+MAVEN_OPTS="$(concat_lines "$MAVEN_PROJECTBASEDIR/.mvn/jvm.config") ${MAVEN_OPTS-}"
 
 # --- Wrapper Properties ---
 MAVEN_WRAPPER_PROPERTIES="${MAVEN_PROJECTBASEDIR}/.mvn/wrapper/maven-wrapper.properties"
@@ -115,7 +132,7 @@ fi
 
 # --- script mode ---
 if [ "${distributionType-}" = "only-script" ]; then
-  MAVEN_HOME="${HOME}/.m2/wrapper/dists/apache-maven-3.9.9-bin"
+  MAVEN_HOME="${HOME}/.m2/wrapper/dists/apache-maven-3.9.9-bin/apache-maven-3.9.9"
 
   if [ ! -f "$MAVEN_HOME/bin/mvn" ]; then
     verbose "Downloading Maven from: $distributionUrl"
@@ -204,17 +221,4 @@ else
     org.apache.maven.wrapper.MavenWrapperMain "$@"
 fi
 
-die() {
-  printf '%s\n' "$1" >&2
-  exit 1
-}
 
-verbose() {
-  [ "${MVNW_VERBOSE-}" != true ] || printf '%s\n' "$1"
-}
-
-concat_lines() {
-  if [ -f "$1" ]; then
-    tr -s '\r\n' '  ' < "$1"
-  fi
-}

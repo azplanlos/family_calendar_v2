@@ -1,5 +1,7 @@
 package de.goForFun.familienkalender;
 
+import de.goForFun.familienkalender.model.CareDay;
+import de.goForFun.familienkalender.model.CareParty;
 import de.goForFun.familienkalender.model.Event;
 import de.goForFun.familienkalender.model.EventSource;
 import de.goForFun.familienkalender.model.RenderData;
@@ -13,8 +15,10 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 public class TestImageCreation {
@@ -54,7 +58,20 @@ public class TestImageCreation {
                 new WeatherDay("03d", -7, -1)
         );
 
-        RenderData renderData = buildRenderData(now, todayEvents, tomorrowEvents, weatherDays);
+        // Wechselmodell-Demodaten relativ zu now (R7): zeigt Betreuungs-Icons
+        // und Monatskalender-Dithering inkl. Wechseltag-Halbzelle.
+        LocalDate base = now.toLocalDate().with(DayOfWeek.MONDAY);
+        Map<LocalDate, CareDay> demo = new HashMap<>();
+        demo.put(base,             CareDay.fullDay(base, CareParty.MANN));
+        demo.put(base.plusDays(1), CareDay.fullDay(base.plusDays(1), CareParty.MANN));
+        demo.put(base.plusDays(2), CareDay.switchDay(base.plusDays(2), CareParty.MANN, CareParty.FRAU));
+        demo.put(base.plusDays(3), CareDay.fullDay(base.plusDays(3), CareParty.FRAU));
+        demo.put(base.plusDays(4), CareDay.fullDay(base.plusDays(4), CareParty.FRAU));
+        LocalDate today = now.toLocalDate();
+        demo.putIfAbsent(today,             CareDay.switchDay(today, CareParty.FRAU, CareParty.MANN));
+        demo.putIfAbsent(today.plusDays(1), CareDay.fullDay(today.plusDays(1), CareParty.FRAU));
+
+        RenderData renderData = buildRenderData(now, todayEvents, tomorrowEvents, weatherDays, demo);
 
         ImageRenderer imageRenderer = new ImageRenderer();
         OutputStream outputStream = new FileOutputStream("test.png");
@@ -112,8 +129,18 @@ public class TestImageCreation {
 
     /**
      * Hilfsmethode: Baut RenderData inkl. calendarEvents und participants aus den übergebenen Event-Listen.
+     * Verwendet einen leeren Betreuungs-Schedule (Feature inaktiv).
      */
     private RenderData buildRenderData(LocalDateTime now, List<Event> todayEvents, List<Event> tomorrowEvents, List<WeatherDay> weatherDays) {
+        return buildRenderData(now, todayEvents, tomorrowEvents, weatherDays, Map.of());
+    }
+
+    /**
+     * Hilfsmethode: Baut RenderData inkl. calendarEvents, participants und custodySchedule
+     * aus den übergebenen Event-Listen.
+     */
+    private RenderData buildRenderData(LocalDateTime now, List<Event> todayEvents, List<Event> tomorrowEvents,
+                                       List<WeatherDay> weatherDays, Map<LocalDate, CareDay> custodySchedule) {
         // Alle Events zusammenführen als calendarEvents (für Test-Zwecke)
         List<Event> calendarEvents = new ArrayList<>();
         calendarEvents.addAll(todayEvents);
@@ -131,6 +158,7 @@ public class TestImageCreation {
         }
         List<String> participants = List.copyOf(participantSet);
 
-        return new RenderData(now, todayEvents, tomorrowEvents, weatherDays, calendarEvents, participants);
+        return new RenderData(now, todayEvents, tomorrowEvents, weatherDays, calendarEvents, participants,
+                List.of(), custodySchedule);
     }
 }

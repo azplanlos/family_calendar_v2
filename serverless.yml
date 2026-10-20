@@ -37,6 +37,8 @@ functions:
       FONTCONFIG_CACHE: /tmp/.cache/fontconfig
       FONTCONFIG_PATH: /tmp/fontconfig
       CALENDAR_FEED: ${param:calendarFeed}
+      CUSTODY_CALENDAR_FEED: ${param:custodyCalendarFeed, ''}
+      CUSTODY_MALE_MATCH: ${param:custodyMaleMatch, ''}
       SCHOOL_CALENDAR_FEED: ${param:schoolCalendarFeed, ''}
       VACATION_CALENDAR_FEED: ${param:vacationCalendarFeed, 'https://www.feiertage-deutschland.de/kalender-download/ics/schulferien-bayern.ics'}
       HOLIDAY_COUNTRY: ${param:holidayCountry, 'de'}

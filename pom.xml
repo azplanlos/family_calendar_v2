@@ -15,6 +15,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <org.mapstruct.version>1.6.3</org.mapstruct.version>
         <org.projectlombok.version>1.18.46</org.projectlombok.version>
+        <net.jqwik.version>1.10.2</net.jqwik.version>
     </properties>
 
 
@@ -54,6 +55,23 @@
             <artifactId>assertj-core</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Property-Based Testing (jqwik, JUnit-Platform-TestEngine). Das Aggregator-Artifact
+             zieht jqwik-api + jqwik-engine; registriert sich per ServiceLoader als TestEngine.
+             HINWEIS: Die tatsächliche Ausführung der @Property-Tests unter Maven/Surefire ist
+             noch offen (siehe Task 1.1 / Orchestrator-Notiz) und wird separat geklärt. -->
+        <dependency>
+            <groupId>net.jqwik</groupId>
+            <artifactId>jqwik</artifactId>
+            <type>pom</type>
+            <scope>test</scope>
+        </dependency>
+        <!-- Launcher explizit auf dem Test-Classpath, damit Surefire alle registrierten
+             JUnit-Platform-Engines (Jupiter UND jqwik) zuverlässig entdeckt und ausführt. -->
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-launcher</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.mnode.ical4j</groupId>
             <artifactId>ical4j</artifactId>
@@ -82,6 +100,17 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- JUnit BOM richtet alle JUnit-Platform-Artefakte (commons, engine, launcher)
+                 und Jupiter auf eine konsistente Version aus. Notwendig, weil jqwik transitiv
+                 eine ältere junit-platform-engine (1.14.x) mitbringt, die sonst mit der von
+                 junit-jupiter-api genutzten Plattformversion kollidiert. -->
+            <dependency>
+                <groupId>org.junit</groupId>
+                <artifactId>junit-bom</artifactId>
+                <version>6.1.0-M1</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <dependency>
                 <groupId>com.amazonaws</groupId>
                 <artifactId>aws-lambda-java-core</artifactId>
@@ -125,6 +154,13 @@
                 <groupId>org.assertj</groupId>
                 <artifactId>assertj-core</artifactId>
                 <version>4.0.0-M1</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>net.jqwik</groupId>
+                <artifactId>jqwik</artifactId>
+                <version>${net.jqwik.version}</version>
+                <type>pom</type>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -196,6 +232,13 @@
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
+            </plugin>
+            <!-- Surefire explizit gepinnt: neuere Version mit robuster JUnit-Platform-Engine-
+                 Erkennung, damit sowohl die Jupiter- als auch die jqwik-@Property-Tests laufen. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.2</version>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

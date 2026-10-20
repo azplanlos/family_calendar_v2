@@ -1,0 +1,314 @@
+{
+  "pbtResults": {
+    "8.2 Property-Test: Dithering-Dichte in [20 %, 40 %]": {
+      "status": "failed",
+      "failingExample": "Sample: arg0: int[] [0, 0, 1, 1]  (x=0, y=0, w=1, h=1)\nDensity = 1.0 (set=1 of 1), expected within closed interval [0.20, 0.40].\nReason: the pixel at (0,0) satisfies (px + 2*py) % 3 == 0, so the single pixel is set, giving fraction 1.0. For tiny rectangles the period-3 diagonal pattern yields 0.0 or 1.0, not ~1/3. This is a genuine design/impl discrepancy: the claim that density stays within [20%,40%] for all w,h>=1 does not hold for small rects (e.g. 1x1). jqwik: tries=1, checks=1, 1 failure. seed=2909399121723147677.",
+      "lastRunTimestamp": 1792488047213
+    },
+    "7.3 Property-Test: Icon-Layout ist disjunkt": {
+      "status": "passed",
+      "lastRunTimestamp": 1792488110402
+    },
+    "7.2 Property-Test: Icon-Farbpalette": {
+      "status": "passed",
+      "lastRunTimestamp": 1792488160364
+    }
+  },
+  "executionHistory": {
+    "1.1 jqwik als Test-Dependency in `pom.xml` ergänzen": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443035196
+      },
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443047910
+      },
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792448926126
+      }
+    ],
+    "1.2 Enum `CareParty` erstellen": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443035869
+      },
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443049312
+      },
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792448927022
+      }
+    ],
+    "1.3 Record `CareDay` erstellen": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443036286
+      },
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792448936811
+      }
+    ],
+    "1.4 Property-Test für `CareDay.iconParty()` schreiben": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443036778
+      }
+    ],
+    "1.5 `EventSource.CUSTODY` ergänzen": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443037130
+      },
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443050154
+      },
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792448928143
+      }
+    ],
+    "2.1 `CareScheduleProvider` mit Block-Erkennung und Wechseltag-Ableitung implementieren": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443037603
+      },
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792448938000
+      }
+    ],
+    "2.2 Property-Test: halboffene Bereichsabdeckung": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443038076
+      }
+    ],
+    "2.3 Property-Test: Overlap-Determinismus über den Tie-Key": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443038490
+      }
+    ],
+    "2.4 Property-Test: Wiederholdeterminismus": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443038563
+      }
+    ],
+    "2.5 Property-Test: Parteiklassifikation (case-insensitive Teilstring)": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443038647
+      }
+    ],
+    "2.6 Property-Test: Block- und Wechseltag-Invariante": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443038727
+      }
+    ],
+    "2.7 Property-Test: keine Partei an nicht abgedeckten Tagen": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443038829
+      }
+    ],
+    "3. Checkpoint - Logik und Property-Tests prüfen": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443039009
+      }
+    ],
+    "4.1 Feld `custodySchedule` und abwärtskompatible Konstruktoren ergänzen": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443039195
+      }
+    ],
+    "4.2 Unit-Test für Konstruktor-Abwärtskompatibilität": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443039252
+      }
+    ],
+    "5.1 URL-Validierung `parseHttpUri` implementieren": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443039312
+      }
+    ],
+    "5.2 Property-Test: URL-Validierung steuert Aktivierung ohne Fehler": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443039372
+      }
+    ],
+    "5.3 Custody-ENV-Reads und Verarbeitungsblock verdrahten": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443039429
+      }
+    ],
+    "5.4 Unit-Tests für Aktivierungs- und Fehlerpfade": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443039485
+      }
+    ],
+    "6. Checkpoint - Integration prüfen": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443039543
+      }
+    ],
+    "7.1 Schedule durchreichen und `drawCareIcon` implementieren": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443039595
+      }
+    ],
+    "7.2 Property-Test: Icon-Farbpalette": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443039647
+      }
+    ],
+    "7.3 Property-Test: Icon-Layout ist disjunkt": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443039706
+      }
+    ],
+    "7.4 Unit-Tests für Party→Icon-Mapping und Platzierung": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443039766
+      }
+    ],
+    "8.1 `fillCustodyDither` (~33 %) implementieren": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443039860
+      }
+    ],
+    "8.2 Property-Test: Dithering-Dichte in [20 %, 40 %]": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443039941
+      }
+    ],
+    "8.3 `drawCustodyHighlight` mit reservierten Zonen implementieren und verdrahten": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443039996
+      }
+    ],
+    "8.4 Property-Test: Highlight-Region-Korrektheit": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443040048
+      }
+    ],
+    "8.5 Property-Test: Trennung von Vollton-Indikator und Mann-Raster": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443040101
+      }
+    ],
+    "8.6 Unit-Test: Heute-Zelle mit MANN": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443040153
+      }
+    ],
+    "9. Checkpoint - Rendering prüfen": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443040210
+      }
+    ],
+    "10.1 `TestImageCreation.buildRenderData` um custodySchedule erweitern": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443040263
+      }
+    ],
+    "11.1 serverless.yml um Custody-ENV-Variablen erweitern (config only)": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443040317
+      },
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443051150
+      },
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792448929221
+      }
+    ],
+    "12. Finaler Checkpoint - gesamte Suite prüfen": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792443040370
+      }
+    ],
+    "11. Deployment-Konfiguration (nur Konfig, keine Deployment-Ausführung)": [
+      {
+        "executionId": "895a2bb8-d210-4457-99af-2058db6e7935",
+        "chatSessionId": "sess_21ebbc6e-40c2-453f-ad4b-0f00850206f8",
+        "timestamp": 1792448929597
+      }
+    ]
+  }
+}
