@@ -229,9 +229,19 @@ public class ImageRenderer {
             // an diesem Tag abgibt, (ab HH:mm) wenn er übernimmt. Nur an Wechseltagen.
             String switchLabel = careSwitchLabel(cd);
             if (switchLabel != null) {
-                // kleine Zeile oberhalb der Icon-Box, rechtsbündig am Spaltenrand
-                FontHelper.drawString(graphics, switchLabel, Aligment.RIGHT, titleFont.get(), 9, COLOR_BLACK,
-                        x, iconTop - 2, width, 9);
+                // kleine Zeile oberhalb der Icon-Box, horizontal zentriert zur Icon-Mitte.
+                // Das Label ist breiter als das 16px-Icon; wir zentrieren es in einer um die
+                // Icon-Mitte (iconX + icon/2) symmetrischen Box, rechts am Spaltenrand begrenzt.
+                int iconCenterX = iconX + icon / 2;
+                int labelBoxWidth = 54; // breit genug für "(bis 16:00)"
+                int labelBoxX = iconCenterX - labelBoxWidth / 2;
+                // rechten Rand nicht über den Spaltenrand (x + width) hinausragen lassen
+                int maxX = x + width - labelBoxWidth;
+                if (labelBoxX > maxX) {
+                    labelBoxX = maxX;
+                }
+                FontHelper.drawString(graphics, switchLabel, Aligment.CENTER, titleFont.get(), 9, COLOR_BLACK,
+                        labelBoxX, iconTop - 2, labelBoxWidth, 9);
             }
         } else {
             // Kein Icon – Überschrift unverändert über die volle Breite (R5.9)
