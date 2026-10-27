@@ -5,26 +5,27 @@ import de.goForFun.familienkalender.model.CareParty;
 import de.goForFun.familienkalender.model.Event;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
 /**
- * Reine Logik-Klasse (keine I/O), die aus ganztägigen Betreuungs-Events
- * (Wechselmodell_Feed, {@code EventSource.CUSTODY}) eine deterministische
- * Tag-zu-{@link CareDay}-Zuordnung ableitet.
+ * Reine Logik-Klasse (keine I/O), die aus den Events des Wechselmodell-Feeds
+ * ({@code EventSource.CUSTODY}) eine deterministische Tag-zu-{@link CareDay}-Zuordnung
+ * ableitet.
  *
- * <p>Der Algorithmus folgt dem Design ("Key Algorithm: Block-Erkennung und
- * Wechseltag-Ableitung"):
+ * <p>Der Feed enthält zwei Event-Arten:
  * <ol>
- *   <li>Jedes Event wird zu einem {@link CareBlock} über den halboffenen
- *       Bereich {@code [DTSTART, DTEND)}.</li>
- *   <li>Pro Tag gewinnt der Block mit dem lexikografisch größten Tie-Key
- *       (Overlap-Determinismus, reihenfolgeunabhängig).</li>
- *   <li>Je abgedecktem Tag wird ein {@link CareDay} abgeleitet; der letzte
- *       Blocktag wird nur dann zum Wechseltag, wenn am Folgetag ein
- *       <em>anderer</em> maßgeblicher Block gilt.</li>
+ *   <li><b>Ganztägige Betreuungsblöcke</b> ({@code VALUE=DATE}, z. B. „Lukas bei Andreas Zöllner"):
+ *       jeder Kalendertag im halboffenen Bereich {@code [DTSTART, DTEND)} gehört zur im
+ *       {@code SUMMARY} genannten Partei.</li>
+ *   <li><b>Getimte Wechsel-Events</b> (mit Uhrzeit, z. B. „Wechsel zu Andreas Zöllner" um 16:00):
+ *       markieren explizit den Übergabe-Zeitpunkt. Der Tag des Events ist ein Wechseltag;
+ *       die im {@code SUMMARY} genannte Partei ist die <em>übernehmende</em> (zweite Tageshälfte),
+ *       die abgebende (erste Tageshälfte) ist die Ganztagspartei dieses Tages aus den Blöcken.</li>
  * </ol>
  *
  * <p>Die Klasse ist bewusst frei von I/O, damit sie property-testbar ist.
@@ -35,9 +36,8 @@ public class CareScheduleProvider {
     private final String maleMatch;
 
     /**
-     * @param custodyEvents ganztägige Betreuungs-Events ({@code EventSource.CUSTODY});
-     *                      {@code startTime}/{@code endTime} als {@code [DTSTART, DTEND)}
-     *                      (jeweils {@code 00:00})
+     * @param custodyEvents Events des Wechselmodell-Feeds ({@code EventSource.CUSTODY}) –
+     *                      ganztägige Betreuungsblöcke und getimte Wechsel-Events gemischt
      * @param maleMatch     Mann_Kennung (nicht leer – der Aufrufer stellt das sicher)
      */
     public CareScheduleProvider(List<Event> custodyEvents, String maleMatch) {
@@ -46,50 +46,45 @@ public class CareScheduleProvider {
     }
 
     /**
-     * Interne Zwischenstruktur: ein Betreuungsblock über den halboffenen
+     * Interne Zwischenstruktur: ein ganztägiger Betreuungsblock über den halboffenen
      * Datumsbereich {@code [startInclusive, endExclusive)}.
-     *
-     * @param startInclusive erster abgedeckter Tag (einschließlich)
-     * @param endExclusive   erster nicht mehr abgedeckter Tag (ausschließlich)
-     * @param party          Betreuende_Partei dieses Blocks
-     * @param tieKey         deterministischer Tie-Key für den Overlap-Determinismus
      */
     record CareBlock(LocalDate startInclusive, LocalDate endExclusive, CareParty party, String tieKey) {
-        /** Letzter abgedeckter Tag des Blocks ({@code endExclusive - 1}). */
-        LocalDate lastDay() {
-            return endExclusive.minusDays(1);
-        }
-
-        /** {@code true}, wenn der Tag {@code d} im halboffenen Bereich des Blocks liegt. */
         boolean covers(LocalDate d) {
             return !d.isBefore(startInclusive) && d.isBefore(endExclusive);
         }
     }
 
     /**
-     * Liefert die deterministische Tag-zu-{@link CareDay}-Zuordnung für alle
-     * abgedeckten Tage. Nicht abgedeckte Tage besitzen keinen Eintrag.
+     * Liefert die deterministische Tag-zu-{@link CareDay}-Zuordnung für alle abgedeckten
+     * Tage. Nicht abgedeckte Tage besitzen keinen Eintrag.
      */
     public Map<LocalDate, CareDay> buildSchedule() {
-        // 1) Events -> Blöcke über halboffenes [DTSTART, DTEND)
-        List<CareBlock> blocks = new java.util.ArrayList<>();
+        List<CareBlock> blocks = new ArrayList<>();
+        List<Event> switchEvents = new ArrayList<>();
+
+        // 1) Events in ganztägige Blöcke und getimte Wechsel-Events aufteilen.
         for (Event e : custodyEvents) {
             if (e == null || e.startTime() == null || e.endTime() == null) {
                 continue;
             }
-            LocalDate startDate = e.startTime().toLocalDate();
-            LocalDate endExcl = e.endTime().toLocalDate();
-            // Robustheit: mind. 1 Tag (deckt u.a. den Länge-1-/degenerierten Randfall ab)
-            if (!endExcl.isAfter(startDate)) {
-                endExcl = startDate.plusDays(1);
+            if (isAllDay(e)) {
+                LocalDate startDate = e.startTime().toLocalDate();
+                LocalDate endExcl = e.endTime().toLocalDate();
+                if (!endExcl.isAfter(startDate)) {
+                    endExcl = startDate.plusDays(1); // Robustheit: mind. 1 Tag
+                }
+                String summary = e.summary();
+                CareParty party = partyOf(summary);
+                String tieKey = startDate + "|" + endExcl + "|" + (summary == null ? "" : summary);
+                blocks.add(new CareBlock(startDate, endExcl, party, tieKey));
+            } else {
+                switchEvents.add(e);
             }
-            String summary = e.summary();
-            CareParty party = summaryContainsIgnoreCase(summary, maleMatch) ? CareParty.MANN : CareParty.FRAU;
-            String tieKey = startDate + "|" + endExcl + "|" + (summary == null ? "" : summary);
-            blocks.add(new CareBlock(startDate, endExcl, party, tieKey));
         }
 
-        // 2) Pro Tag den maßgeblichen Block bestimmen (lexikografisch größter Tie-Key gewinnt)
+        // 2) Pro Tag den maßgeblichen Ganztagsblock bestimmen
+        //    (Overlap-Determinismus: lexikografisch größter Tie-Key gewinnt).
         Map<LocalDate, CareBlock> dayToBlock = new HashMap<>();
         for (CareBlock b : blocks) {
             for (LocalDate d = b.startInclusive(); d.isBefore(b.endExclusive()); d = d.plusDays(1)) {
@@ -100,25 +95,50 @@ public class CareScheduleProvider {
             }
         }
 
-        // 3) CareDay je abgedecktem Tag ableiten
+        // 3) Basis: jeder abgedeckte Tag ist zunächst ein Ganztag mit der Blockpartei.
         Map<LocalDate, CareDay> schedule = new HashMap<>();
         for (Map.Entry<LocalDate, CareBlock> entry : dayToBlock.entrySet()) {
             LocalDate d = entry.getKey();
-            CareBlock b = entry.getValue();
-            boolean isLastDayOfBlock = d.equals(b.lastDay());
-            if (isLastDayOfBlock) {
-                CareBlock next = dayToBlock.get(d.plusDays(1));
-                if (next != null && next != b) {
-                    // Wechseltag: firstHalf = endender Block, secondHalf = Folgeblock
-                    schedule.put(d, CareDay.switchDay(d, b.party(), next.party()));
-                } else {
-                    schedule.put(d, CareDay.fullDay(d, b.party()));
-                }
-            } else {
-                schedule.put(d, CareDay.fullDay(d, b.party()));
+            schedule.put(d, CareDay.fullDay(d, entry.getValue().party()));
+        }
+
+        // 4) Getimte Wechsel-Events anwenden: markieren den Tag als Wechseltag.
+        //    Bei mehreren Wechsel-Events am selben Tag gewinnt das späteste (deterministisch).
+        Map<LocalDate, Event> switchByDay = new HashMap<>();
+        for (Event e : switchEvents) {
+            LocalDate d = e.startTime().toLocalDate();
+            Event cur = switchByDay.get(d);
+            if (cur == null || e.startTime().isAfter(cur.startTime())) {
+                switchByDay.put(d, e);
             }
         }
+
+        for (Map.Entry<LocalDate, Event> entry : switchByDay.entrySet()) {
+            LocalDate d = entry.getKey();
+            Event e = entry.getValue();
+            CareParty second = partyOf(e.summary());                 // übernehmende Partei ("Wechsel zu …")
+            CareBlock block = dayToBlock.get(d);
+            // Abgebende Partei = Ganztagspartei dieses Tages (Vormittag); Fallback: Gegenpartei.
+            CareParty first = (block != null) ? block.party() : otherParty(second);
+            LocalTime switchTime = e.startTime().toLocalTime();
+            schedule.put(d, CareDay.switchDay(d, first, second, switchTime));
+        }
+
         return schedule;
+    }
+
+    /** Ganztägig, wenn Start und Ende jeweils auf Mitternacht (00:00) liegen. */
+    private static boolean isAllDay(Event e) {
+        return e.startTime().getHour() == 0 && e.startTime().getMinute() == 0
+                && e.endTime().getHour() == 0 && e.endTime().getMinute() == 0;
+    }
+
+    private CareParty partyOf(String summary) {
+        return summaryContainsIgnoreCase(summary, maleMatch) ? CareParty.MANN : CareParty.FRAU;
+    }
+
+    private static CareParty otherParty(CareParty p) {
+        return p == CareParty.MANN ? CareParty.FRAU : CareParty.MANN;
     }
 
     /**

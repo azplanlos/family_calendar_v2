@@ -22,6 +22,7 @@ import java.io.OutputStream;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -223,6 +224,15 @@ public class ImageRenderer {
             int headerWidth = width - (icon + 4);
             FontHelper.drawString(graphics, headerText, Aligment.RIGHT, titleFont.get(), 16, COLOR_BLACK, x, DAY_EVENTS_Y_START + 5, headerWidth, 16);
             drawCareIcon(graphics, iconParty, iconX, iconTop, icon);
+
+            // Wechseltag-Label aus Mann-Sicht ÜBER dem Icon (R5.10): (bis HH:mm) wenn der Mann
+            // an diesem Tag abgibt, (ab HH:mm) wenn er übernimmt. Nur an Wechseltagen.
+            String switchLabel = careSwitchLabel(cd);
+            if (switchLabel != null) {
+                // kleine Zeile oberhalb der Icon-Box, rechtsbündig am Spaltenrand
+                FontHelper.drawString(graphics, switchLabel, Aligment.RIGHT, titleFont.get(), 9, COLOR_BLACK,
+                        x, iconTop - 2, width, 9);
+            }
         } else {
             // Kein Icon – Überschrift unverändert über die volle Breite (R5.9)
             FontHelper.drawString(graphics, headerText, Aligment.RIGHT, titleFont.get(), 16, COLOR_BLACK, x, DAY_EVENTS_Y_START + 5, width, 16);
@@ -870,6 +880,31 @@ public class ImageRenderer {
     }
 
     // ========== CARE ICON (Wechselmodell) ==========
+
+    /** Formatter für die Wechsel-Uhrzeit (HH:mm, z. B. 16:00). */
+    private static final DateTimeFormatter SWITCH_TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
+
+    /**
+     * Liefert das Wechseltag-Label aus Mann-Sicht für die Anzeige über dem Icon (R5.10):
+     * {@code (bis HH:mm)}, wenn der Mann an diesem Tag abgibt (erste Hälfte MANN),
+     * {@code (ab HH:mm)}, wenn der Mann übernimmt (zweite Hälfte MANN).
+     * {@code null}, wenn der Tag kein Wechseltag ist oder der Mann nicht beteiligt ist
+     * bzw. keine Uhrzeit vorliegt.
+     */
+    private String careSwitchLabel(CareDay cd) {
+        if (cd == null || !cd.switchDay() || cd.switchTime() == null) {
+            return null;
+        }
+        LocalTime t = cd.switchTime();
+        String time = t.format(SWITCH_TIME_FORMAT);
+        if (cd.firstHalf() == CareParty.MANN && cd.secondHalf() != CareParty.MANN) {
+            return "(bis " + time + ")";   // Mann gibt ab
+        }
+        if (cd.secondHalf() == CareParty.MANN && cd.firstHalf() != CareParty.MANN) {
+            return "(ab " + time + ")";    // Mann übernimmt
+        }
+        return null; // Mann an beiden/keiner Hälfte -> keine Mann-Sicht-Angabe
+    }
 
     /**
      * Zeichnet das Betreuungs-Piktogramm für das Wechselmodell am Ende der Tagesüberschrift.

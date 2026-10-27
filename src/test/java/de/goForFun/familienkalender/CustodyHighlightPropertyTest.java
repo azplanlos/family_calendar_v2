@@ -8,6 +8,7 @@ import java.awt.image.IndexColorModel;
 import java.awt.image.Raster;
 import java.lang.reflect.Method;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -115,7 +116,7 @@ class CustodyHighlightPropertyTest {
                 schedule = Map.of(renderDay, CareDay.fullDay(renderDay, CareParty.FRAU));
                 break;
             case SWITCH:
-                schedule = Map.of(renderDay, CareDay.switchDay(renderDay, firstHalf, secondHalf));
+                schedule = Map.of(renderDay, CareDay.switchDay(renderDay, firstHalf, secondHalf, LocalTime.of(16, 0)));
                 break;
             case MISSING:
             default:

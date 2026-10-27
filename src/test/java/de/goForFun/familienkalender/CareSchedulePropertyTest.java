@@ -8,6 +8,7 @@ import de.goForFun.familienkalender.model.Event;
 import de.goForFun.familienkalender.model.EventSource;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -158,10 +159,12 @@ class CareSchedulePropertyTest {
     // Property 6
     // ------------------------------------------------------------------
 
-    // Feature: wechselmodell-kalender, Property 6: Block- und Wechseltag-Invariante
-    // Validates: Requirements 4.3, 4.4, 4.5
+    // Feature: wechselmodell-kalender, Property 6: Wechseltag entsteht NICHT aus Blockgrenzen
+    // (nur ganztägige Blöcke als Eingabe ⇒ jeder abgedeckte Tag ist Ganztag mit Blockpartei;
+    //  keine Wechseltage).
+    // Validates: Requirements 4.4, 4.5
     @Property(tries = 100)
-    void blockAndSwitchDayInvariant(@ForAll("blockSequence") List<Block> blocks) {
+    void blockOnlyInputYieldsOnlyFullDays(@ForAll("blockSequence") List<Block> blocks) {
         List<Event> events = new ArrayList<>();
         for (Block b : blocks) {
             events.add(custodyEvent(b.start, b.start.plusDays(b.length),
@@ -171,37 +174,114 @@ class CareSchedulePropertyTest {
         Map<LocalDate, CareDay> schedule =
                 new CareScheduleProvider(events, MALE_MATCH).buildSchedule();
 
-        // Non-overlapping blocks ⇒ each day's governing block is simply the block covering it.
+        // Non-overlapping blocks ⇒ jeder abgedeckte Tag ist genau der ihn deckende Block.
+        // Da KEINE getimten Wechsel-Events vorliegen, gibt es keine Wechseltage:
+        // jeder Tag ist ein Ganztag mit der Partei seines Blocks.
         for (Block b : blocks) {
             LocalDate last = b.start.plusDays(b.length - 1);
             for (LocalDate d = b.start; !d.isAfter(last); d = d.plusDays(1)) {
                 CareDay cd = schedule.get(d);
                 assertThat(cd).as("day %s must be covered", d).isNotNull();
 
-                Block nextBlock = blockCovering(blocks, d.plusDays(1));
-                boolean isLastDay = d.equals(last);
-
-                if (!isLastDay) {
-                    // Innerer Tag ⇒ Ganztag mit Blockpartei.
-                    assertThat(cd.switchDay()).as("day %s inner ⇒ not switchDay", d).isFalse();
-                    assertThat(cd.fullDay()).isEqualTo(b.party);
-                } else if (nextBlock != null && nextBlock != b && nextBlock.party != b.party) {
-                    // Letzter Tag + anderer Folgeblock mit anderer Partei ⇒ Wechseltag.
-                    assertThat(cd.switchDay()).as("day %s switchDay", d).isTrue();
-                    assertThat(cd.firstHalf()).isEqualTo(b.party);
-                    assertThat(cd.secondHalf()).isEqualTo(nextBlock.party);
-                } else if (nextBlock != null && nextBlock != b) {
-                    // Folgeblock mit GLEICHER Partei: Design erzeugt switchDay (firstHalf==secondHalf==party).
-                    // firstHalf ist stets die endende Blockpartei.
-                    assertThat(cd.firstHalf()).isEqualTo(b.party);
-                    assertThat(cd.secondHalf()).isEqualTo(nextBlock.party);
-                } else {
-                    // Letzter Tag ohne Folgeblock am Folgetag ⇒ Ganztag.
-                    assertThat(cd.switchDay()).as("day %s no follow ⇒ fullDay", d).isFalse();
-                    assertThat(cd.fullDay()).isEqualTo(b.party);
-                }
+                assertThat(cd.switchDay())
+                        .as("day %s: block-only input must never produce a switch day", d)
+                        .isFalse();
+                assertThat(cd.fullDay())
+                        .as("day %s: full-day party must equal its block party", d)
+                        .isEqualTo(b.party);
+                assertThat(cd.firstHalf()).isEqualTo(b.party);
+                assertThat(cd.secondHalf()).isEqualTo(b.party);
+                assertThat(cd.switchTime())
+                        .as("day %s: full day has no switch time", d)
+                        .isNull();
             }
         }
+
+        // Es existiert überhaupt kein Wechseltag.
+        assertThat(schedule.values())
+                .as("block-only input must not contain any switch day")
+                .allMatch(cd -> !cd.switchDay());
+    }
+
+    // Feature: wechselmodell-kalender, Property 6: Wechseltag entsteht durch getimtes Wechsel-Event
+    // (secondHalf=uebernehmende Partei, firstHalf=Blockpartei des Tages bzw. Gegenpartei, switchTime=Event-Uhrzeit);
+    // Tage ohne Wechsel-Event bleiben Ganztage.
+    // Validates: Requirements 4.3, 4.4, 4.5
+    @Property(tries = 100)
+    void timedSwitchEventCreatesSwitchDay(@ForAll("switchScenario") SwitchScenario scenario) {
+        List<Event> events = new ArrayList<>();
+
+        // 1) Ganztägige Blöcke.
+        for (Block b : scenario.blocks) {
+            events.add(custodyEvent(b.start, b.start.plusDays(b.length),
+                    b.party == CareParty.MANN ? "Papa MANN" : "Mama"));
+        }
+
+        // 2) Getimte Wechsel-Events: pro Eintrag ein "Wechsel zu …" am gegebenen Tag mit Uhrzeit.
+        for (SwitchEvent se : scenario.switches) {
+            String summary = "Wechsel zu " + (se.party == CareParty.MANN ? "Papa MANN" : "Mama");
+            events.add(timedSwitchEvent(se.day, se.time, summary));
+        }
+
+        Map<LocalDate, CareDay> schedule =
+                new CareScheduleProvider(events, MALE_MATCH).buildSchedule();
+
+        // Erwartung je Tag: der späteste Wechsel pro Tag gewinnt.
+        Map<LocalDate, SwitchEvent> latestSwitch = new java.util.HashMap<>();
+        for (SwitchEvent se : scenario.switches) {
+            SwitchEvent cur = latestSwitch.get(se.day);
+            if (cur == null || se.time.isAfter(cur.time)) {
+                latestSwitch.put(se.day, se);
+            }
+        }
+
+        // 2a) Jeder Tag mit (spätestem) Wechsel-Event ist ein Wechseltag mit den erwarteten Hälften.
+        for (Map.Entry<LocalDate, SwitchEvent> entry : latestSwitch.entrySet()) {
+            LocalDate day = entry.getKey();
+            SwitchEvent se = entry.getValue();
+            CareDay cd = schedule.get(day);
+            assertThat(cd).as("switch day %s must be in schedule", day).isNotNull();
+
+            assertThat(cd.switchDay()).as("day %s must be a switch day", day).isTrue();
+            assertThat(cd.secondHalf())
+                    .as("day %s: secondHalf = übernehmende Partei des Wechsel-Events", day)
+                    .isEqualTo(se.party);
+            assertThat(cd.switchTime())
+                    .as("day %s: switchTime = Uhrzeit des Wechsel-Events", day)
+                    .isEqualTo(se.time);
+
+            Block cover = blockCovering(scenario.blocks, day);
+            CareParty expectedFirst = (cover != null) ? cover.party : otherParty(se.party);
+            assertThat(cd.firstHalf())
+                    .as("day %s: firstHalf = Blockpartei (bzw. Gegenpartei der übernehmenden)", day)
+                    .isEqualTo(expectedFirst);
+            assertThat(cd.fullDay())
+                    .as("day %s: Wechseltag hat keine Ganztagspartei", day)
+                    .isNull();
+        }
+
+        // 2b) Abgedeckte Tage OHNE Wechsel-Event bleiben Ganztage mit der Blockpartei.
+        for (Block b : scenario.blocks) {
+            LocalDate last = b.start.plusDays(b.length - 1);
+            for (LocalDate d = b.start; !d.isAfter(last); d = d.plusDays(1)) {
+                if (latestSwitch.containsKey(d)) {
+                    continue; // als Wechseltag oben geprüft
+                }
+                CareDay cd = schedule.get(d);
+                assertThat(cd).as("covered day %s must be in schedule", d).isNotNull();
+                assertThat(cd.switchDay())
+                        .as("day %s without Wechsel-Event must stay a full day", d)
+                        .isFalse();
+                // Maßgeblicher Block (größter Tie-Key) – bei nicht-überlappenden Blöcken = b.
+                assertThat(cd.fullDay())
+                        .as("day %s full-day party", d)
+                        .isEqualTo(b.party);
+            }
+        }
+    }
+
+    private static CareParty otherParty(CareParty p) {
+        return p == CareParty.MANN ? CareParty.FRAU : CareParty.MANN;
     }
 
     // ------------------------------------------------------------------
@@ -342,9 +422,75 @@ class CareSchedulePropertyTest {
                 });
     }
 
+    /**
+     * Szenario für die getimte Wechsel-Semantik: eine Folge nicht-überlappender Blöcke
+     * plus eine Menge getimter Wechsel-Events, die (überwiegend) auf abgedeckte Tage fallen.
+     */
+    @Provide
+    Arbitrary<SwitchScenario> switchScenario() {
+        return blockSequence().flatMap(blocks -> {
+            if (blocks.isEmpty()) {
+                return Arbitraries.just(new SwitchScenario(blocks, List.of()));
+            }
+            // Zulässige Wechseltage: alle von einem Block abgedeckten Tage (als Offset ab BASE).
+            List<Integer> coveredOffsets = new ArrayList<>();
+            for (Block b : blocks) {
+                for (int i = 0; i < b.length; i++) {
+                    coveredOffsets.add((int) (b.start.plusDays(i).toEpochDay() - BASE.toEpochDay()));
+                }
+            }
+            Arbitrary<Integer> dayOffset = Arbitraries.of(coveredOffsets);
+            Arbitrary<LocalTime> times = Combinators.combine(
+                            Arbitraries.integers().between(0, 23),
+                            Arbitraries.of(0, 15, 30, 45))
+                    .as(LocalTime::of);
+            Arbitrary<CareParty> parties = Arbitraries.of(CareParty.class);
+
+            Arbitrary<SwitchEvent> switchEvent = Combinators.combine(dayOffset, times, parties)
+                    .as((off, t, p) -> new SwitchEvent(BASE.plusDays(off), t, p));
+
+            return switchEvent.list().ofMinSize(1).ofMaxSize(5)
+                    .map(switches -> new SwitchScenario(blocks, switches));
+        });
+    }
+
     // ==================================================================
     // Helpers
     // ==================================================================
+
+    /** Ein getimtes Wechsel-Event an einem Tag mit übernehmender Partei. */
+    static final class SwitchEvent {
+        final LocalDate day;
+        final LocalTime time;
+        final CareParty party; // übernehmende Partei (secondHalf)
+
+        SwitchEvent(LocalDate day, LocalTime time, CareParty party) {
+            this.day = day;
+            this.time = time;
+            this.party = party;
+        }
+
+        @Override
+        public String toString() {
+            return "Switch[" + day + " " + time + " -> " + party + "]";
+        }
+    }
+
+    /** Blöcke + getimte Wechsel-Events für die Wechseltag-Property. */
+    static final class SwitchScenario {
+        final List<Block> blocks;
+        final List<SwitchEvent> switches;
+
+        SwitchScenario(List<Block> blocks, List<SwitchEvent> switches) {
+            this.blocks = blocks;
+            this.switches = switches;
+        }
+
+        @Override
+        public String toString() {
+            return "SwitchScenario{blocks=" + blocks + ", switches=" + switches + "}";
+        }
+    }
 
     /** Nicht-überlappender Betreuungsblock für Property 6. */
     static final class Block {
@@ -369,6 +515,18 @@ class CareSchedulePropertyTest {
                 List.of(),
                 startDate.atStartOfDay(),
                 endExclusive.atStartOfDay(),
+                summary,
+                null,
+                EventSource.CUSTODY,
+                null);
+    }
+
+    /** Getimtes Wechsel-Event: Start = day+time, Ende = +15 min (⇒ nicht ganztägig). */
+    private static Event timedSwitchEvent(LocalDate day, LocalTime time, String summary) {
+        return new Event(
+                List.of(),
+                day.atTime(time),
+                day.atTime(time).plusMinutes(15),
                 summary,
                 null,
                 EventSource.CUSTODY,

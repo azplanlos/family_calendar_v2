@@ -4,9 +4,9 @@
 
 Diese Erweiterung ergänzt den bestehenden Familienkalender um einen optionalen **Wechselmodell-Kalender** für die Kinderbetreuung im Wechselmodell (shared custody / alternating care). Ziel ist es, für jeden Tag zu kennzeichnen, welcher Elternteil an diesem Tag die Betreuung übernimmt.
 
-Die Betreuungsdaten stammen aus einem **externen iCal-Feed**, den der Betreiber selbst pflegt. Dieser Feed (Wechselmodell_Feed) wird über die bestehende Feed-Infrastruktur (`EventRepository` / `IcalParser`, ical4j) eingelesen und getrennt von den regulären Terminen verarbeitet. Er enthält ganztägige Events, deren Titel (`SUMMARY`) benennt, wer das Kind an den betroffenen Tagen betreut (z. B. „X bei A" oder „X bei Elternteil B").
+Die Betreuungsdaten stammen aus einem **externen iCal-Feed**, den der Betreiber selbst pflegt. Dieser Feed (Wechselmodell_Feed) wird über die bestehende Feed-Infrastruktur (`EventRepository` / `IcalParser`, ical4j) eingelesen und getrennt von den regulären Terminen verarbeitet. Er enthält zwei Arten von Events: ganztägige Betreuungsblöcke, deren Titel (`SUMMARY`) benennt, wer das Kind an den betroffenen Tagen betreut, und getimte Wechsel-Events mit Uhrzeit (Titel beginnend mit „Wechsel zu …“), die den konkreten Übergabe-Zeitpunkt und die übernehmende Partei markieren.
 
-Ein Tag kann dabei zwei Ausprägungen haben: Er ist entweder ein **ganztägiger Betreuungstag** mit einer einzigen betreuenden Partei oder ein **Wechseltag**, an dem die Übergabe stattfindet und an dem die erste Tageshälfte der endenden und die zweite Tageshälfte der beginnenden Partei gehört.
+Ein Tag kann dabei zwei Ausprägungen haben: Er ist entweder ein **ganztägiger Betreuungstag** mit einer einzigen betreuenden Partei oder ein **Wechseltag**, der durch ein getimtes Wechsel-Event markiert ist und an dem die Übergabe zu einer bestimmten Uhrzeit stattfindet; die erste Tageshälfte gehört der abgebenden, die zweite Tageshälfte der übernehmenden Partei.
 
 Die Funktion umfasst drei Bausteine:
 
@@ -21,16 +21,18 @@ Das Feature besitzt **keinen separaten Ein-/Aus-Schalter**. Es aktiviert sich au
 ## Glossary
 
 - **Wechselmodell_Kalender**: Funktionsbaustein, der pro Tag die betreuende Partei aus dem Wechselmodell_Feed bestimmt und darstellt.
-- **Wechselmodell_Feed (Custody_Feed)**: Externer iCal-Feed (RFC 5545) mit ganztägigen Betreuungs-Events, der vom Betreiber gepflegt und über die ENV-Variable `CUSTODY_CALENDAR_FEED` als URL konfiguriert wird.
+- **Wechselmodell_Feed (Custody_Feed)**: Externer iCal-Feed (RFC 5545) mit ganztägigen Betreuungsblöcken und getimten Wechsel-Events, der vom Betreiber gepflegt und über die ENV-Variable `CUSTODY_CALENDAR_FEED` als URL konfiguriert wird.
 - **Mann_Kennung (Male_Match)**: Konfigurierbarer Namens-Teilstring zur Identifizierung des Manns (z. B. „Andreas Zöllner"), über die ENV-Variable `CUSTODY_MALE_MATCH` konfiguriert.
 - **Betreuende_Partei (Care_Party)**: Die an einem Tag oder einer Tageshälfte betreuende Person, einer von zwei Werten: `MANN` oder `FRAU`. Ein Tag ohne Betreuungs-Event hat keine Betreuende_Partei.
 - **Betreuungsblock (Care_Block)**: Die zusammenhängende Folge von Kalendertagen, die durch ein einzelnes Betreuungs_Event über den halboffenen Bereich `[DTSTART, DTEND)` abgedeckt wird und einer einzigen Betreuenden_Partei zugeordnet ist.
-- **Wechseltag (Switch_Day)**: Der letzte abgedeckte Tag eines Betreuungsblocks, an dem die Übergabe stattfindet, sofern unmittelbar ein Folgeblock beginnt. Ein Wechseltag besitzt eine Partei der Erste_Tageshälfte (= Partei des endenden Blocks) und eine Partei der Zweite_Tageshälfte (= Partei des beginnenden Folgeblocks).
-- **Erste_Tageshälfte (First_Half)**: Die erste Hälfte eines Wechseltags; ihre Partei ist die Betreuende_Partei des endenden (aktuellen) Betreuungsblocks.
-- **Zweite_Tageshälfte (Second_Half)**: Die zweite Hälfte eines Wechseltags; ihre Partei ist die Betreuende_Partei des unmittelbar beginnenden Folgeblocks.
+- **Wechsel_Event (Switch_Event)**: Ein getimtes `VEVENT` im Wechselmodell_Feed (mit Uhrzeit, nicht ganztägig), dessen `SUMMARY` die übernehmende Partei benennt (Titel beginnend mit „Wechsel“). `DTSTART` liefert Datum und Uhrzeit der Übergabe.
+- **Wechseltag (Switch_Day)**: Ein Kalendertag, für den ein Wechsel_Event vorliegt. Die Übergabe findet zur Wechsel_Uhrzeit statt. Ein Wechseltag besitzt eine Partei der Erste_Tageshälfte (= abgebende Partei, Ganztagspartei dieses Tages aus den Blöcken) und eine Partei der Zweite_Tageshälfte (= übernehmende Partei aus dem Wechsel_Event).
+- **Erste_Tageshälfte (First_Half)**: Die erste Hälfte eines Wechseltags (vor der Übergabe); ihre Partei ist die abgebende Betreuende_Partei (Ganztagspartei dieses Tages aus den Blöcken).
+- **Zweite_Tageshälfte (Second_Half)**: Die zweite Hälfte eines Wechseltags (nach der Übergabe); ihre Partei ist die übernehmende Betreuende_Partei aus dem Wechsel_Event.
 - **Ganztägige_Partei (Full_Day_Party)**: Die einzige Betreuende_Partei eines normalen (nicht als Wechseltag erkannten) abgedeckten Tages, die für den gesamten Tag gilt.
 - **Betreuungs_Icon (Care_Icon)**: Grafisches Symbol neben der Tagesüberschrift, das die betreuende Partei anzeigt (Icon „Mann" oder Icon „Frau").
 - **Betreuungs_Event (Care_Event)**: Ein ganztägiges `VEVENT` im Wechselmodell_Feed mit `DTSTART`/`DTEND` als `VALUE=DATE` und einem `SUMMARY`, das die betreuende Partei für den abgedeckten Datumsbereich benennt.
+- **Wechsel_Uhrzeit (Switch_Time)**: Die Uhrzeit der Übergabe an einem Wechseltag, aus `DTSTART` des zugehörigen Wechsel_Events (z. B. 16:00).
 - **CreateKalenderImage**: Bestehende Lambda-Funktion (EventBridge-getriggert), die das Kalenderbild erzeugt und PNG + BIN nach S3 lädt.
 - **ImageRenderer**: Bestehende Klasse, die das 800×480 3-Farben-Bild (weiß/schwarz/rot) rendert.
 - **RenderData**: Bestehender Record, der alle Renderdaten für den `ImageRenderer` bündelt, einschließlich einer Fehlerliste.
@@ -71,10 +73,10 @@ Das Feature besitzt **keinen separaten Ein-/Aus-Schalter**. Es aktiviert sich au
 1. WHERE das Feature aktiv ist, THE Wechselmodell_Kalender SHALL den Wechselmodell_Feed über EventRepository und IcalParser abrufen und einlesen.
 2. THE Wechselmodell_Kalender SHALL den Wechselmodell_Feed getrennt von den regulären Terminen verarbeiten und keine Betreuungs_Events in die Tages-Eventliste der RenderData aufnehmen.
 3. WHEN ein Betreuungs_Event mit `DTSTART` und `DTEND` als `VALUE=DATE` eingelesen wird, THE Wechselmodell_Kalender SHALL jeden Kalendertag im halboffenen Bereich von einschließlich `DTSTART` bis ausschließlich `DTEND` dem durch dieses Betreuungs_Event definierten Betreuungsblock und der im `SUMMARY` benannten Betreuenden_Partei zuordnen.
-4. WHEN ein Betreuungs_Event eine einzelne Tagesspanne (`DTEND` gleich `DTSTART` plus ein Tag) abdeckt, THE Wechselmodell_Kalender SHALL genau den Tag `DTSTART` dem durch dieses Betreuungs_Event definierten Betreuungsblock und der im `SUMMARY` benannten Betreuenden_Partei zuordnen.
+4. WHEN ein getimtes Wechsel_Event (mit Uhrzeit, Titel beginnend mit „Wechsel“) eingelesen wird, THE Wechselmodell_Kalender SHALL den Kalendertag seines `DTSTART` als Wechseltag kennzeichnen, die Wechsel_Uhrzeit aus der Uhrzeit des `DTSTART` übernehmen und die im `SUMMARY` benannte Partei als übernehmende Partei (Zweite_Tageshälfte) bestimmen.
 5. IF mehrere Betreuungs_Events denselben Kalendertag abdecken, THEN THE Wechselmodell_Kalender SHALL diesem Tag den Betreuungsblock und die Betreuende_Partei des Betreuungs_Events zuordnen, dessen Schlüssel aus (`DTSTART`, `DTEND`, `SUMMARY`) lexikografisch am größten ist, sodass das Ergebnis deterministisch und von der Einlesereihenfolge unabhängig ist.
 6. IF der Wechselmodell_Feed nicht erreichbar ist oder keine gültigen iCal-Daten enthält, THEN THE Wechselmodell_Kalender SHALL einen Fehler, der den Wechselmodell_Feed benennt, in die Fehlerliste der RenderData aufnehmen und das übrige Rendern des Kalenderbilds ohne Betreuungs_Icon und ohne Mann-Tag-Hervorhebung fortsetzen.
-7. WHEN derselbe Wechselmodell_Feed zweimal mit derselben Mann_Kennung eingelesen wird, THE Wechselmodell_Kalender SHALL für jeden abgedeckten Tag beide Male dasselbe Ergebnis (Ganztägige_Partei bzw. Wechseltag-Paar aus Erste_Tageshälfte und Zweite_Tageshälfte) zuordnen.
+7. WHEN derselbe Wechselmodell_Feed zweimal mit derselben Mann_Kennung eingelesen wird, THE Wechselmodell_Kalender SHALL für jeden abgedeckten Tag beide Male dasselbe Ergebnis (Ganztägige_Partei bzw. Wechseltag-Tripel aus Erste_Tageshälfte, Zweite_Tageshälfte und Wechsel_Uhrzeit) zuordnen.
 
 ### Requirement 4: Bestimmung der betreuenden Partei je Tag
 
@@ -84,9 +86,9 @@ Das Feature besitzt **keinen separaten Ein-/Aus-Schalter**. Es aktiviert sich au
 
 1. WHEN das `SUMMARY` des für einen Betreuungsblock maßgeblichen Betreuungs_Events die Mann_Kennung als Teilstring ohne Berücksichtigung der Groß-/Kleinschreibung enthält, THE Wechselmodell_Kalender SHALL die Betreuende_Partei dieses Betreuungsblocks als `MANN` bestimmen.
 2. WHEN das `SUMMARY` des für einen Betreuungsblock maßgeblichen Betreuungs_Events die Mann_Kennung nicht als Teilstring enthält, THE Wechselmodell_Kalender SHALL die Betreuende_Partei dieses Betreuungsblocks als `FRAU` bestimmen.
-3. WHEN der letzte abgedeckte Tag eines Betreuungsblocks zugleich der Tag unmittelbar vor dem `DTSTART` eines Folgeblocks ist (das heißt, ein Folgeblock beginnt am Tag Wechseltag plus ein Tag), THE Wechselmodell_Kalender SHALL diesen Tag als Wechseltag kennzeichnen, die Partei der Erste_Tageshälfte auf die Betreuende_Partei des endenden Blocks setzen und die Partei der Zweite_Tageshälfte auf die Betreuende_Partei des beginnenden Folgeblocks setzen.
-4. IF der letzte abgedeckte Tag eines Betreuungsblocks keinen unmittelbar am Folgetag beginnenden Folgeblock besitzt, THEN THE Wechselmodell_Kalender SHALL diesen Tag nicht als Wechseltag kennzeichnen und ihm die Ganztägige_Partei des aktuellen Betreuungsblocks zuordnen.
-5. WHERE ein abgedeckter Tag nicht der letzte abgedeckte Tag seines Betreuungsblocks ist, THE Wechselmodell_Kalender SHALL diesem Tag die Ganztägige_Partei des Betreuungsblocks zuordnen.
+3. WHEN für einen Kalendertag ein Wechsel_Event vorliegt, THE Wechselmodell_Kalender SHALL diesen Tag als Wechseltag kennzeichnen, die Partei der Zweite_Tageshälfte auf die im Wechsel_Event benannte übernehmende Partei setzen, die Partei der Erste_Tageshälfte auf die abgebende Partei (Ganztagspartei dieses Tages aus den Betreuungsblöcken; fehlt ein Block, die Gegenpartei der übernehmenden) setzen und die Wechsel_Uhrzeit aus dem Wechsel_Event übernehmen.
+4. IF für einen abgedeckten Tag kein Wechsel_Event vorliegt, THEN THE Wechselmodell_Kalender SHALL diesen Tag nicht als Wechseltag kennzeichnen und ihm die Ganztägige_Partei des maßgeblichen Betreuungsblocks zuordnen.
+5. WHERE ein abgedeckter Tag kein Wechsel_Event besitzt, aber von einem Betreuungsblock abgedeckt wird, THE Wechselmodell_Kalender SHALL diesem Tag die Ganztägige_Partei des maßgeblichen Betreuungsblocks zuordnen.
 6. WHERE für einen Tag kein Betreuungs_Event vorliegt, THE Wechselmodell_Kalender SHALL diesem Tag keine Betreuende_Partei zuordnen.
 
 ### Requirement 5: Betreuungs-Icon in der Tagesansicht
@@ -104,6 +106,7 @@ Das Feature besitzt **keinen separaten Ein-/Aus-Schalter**. Es aktiviert sich au
 7. THE ImageRenderer SHALL das Betreuungs_Icon ausschließlich aus den Farben Schwarz und COLOR_RED sowie transparentem Hintergrund zeichnen und keine Graustufen oder Halbtöne verwenden.
 8. THE ImageRenderer SHALL das Betreuungs_Icon so positionieren, dass es weder die Tagesüberschrift noch die Events der jeweiligen Spalte überlappt.
 9. IF für einen darzustellenden Tag keine Betreuende_Partei vorliegt, THEN THE ImageRenderer SHALL die betroffene Spalte ohne Betreuungs_Icon zeichnen und die übrige Darstellung von Tagesüberschrift und Events unverändert beibehalten.
+10. WHERE ein darzustellender Tag ein Wechseltag ist und der Mann an der Übergabe beteiligt ist, THE ImageRenderer SHALL über dem Betreuungs_Icon – rechtsbündig am rechten Spaltenrand – ein kleines Wechsel-Label aus Mann-Sicht anzeigen: „(bis HH:mm)“, wenn die Partei der Erste_Tageshälfte `MANN` ist (der Mann gibt zur Wechsel_Uhrzeit ab), bzw. „(ab HH:mm)“, wenn die Partei der Zweite_Tageshälfte `MANN` ist (der Mann übernimmt zur Wechsel_Uhrzeit); dabei ist HH:mm die Wechsel_Uhrzeit im 24-Stunden-Format. WHERE der Tag kein Wechseltag ist oder der Mann an keiner Tageshälfte beteiligt ist, THE ImageRenderer SHALL kein Wechsel-Label anzeigen.
 
 ### Requirement 6: Hervorhebung der Mann-Tage im Monatskalender
 

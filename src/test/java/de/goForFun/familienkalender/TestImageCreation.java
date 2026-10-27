@@ -14,6 +14,7 @@ import java.io.OutputStream;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -64,12 +65,16 @@ public class TestImageCreation {
         Map<LocalDate, CareDay> demo = new HashMap<>();
         demo.put(base,             CareDay.fullDay(base, CareParty.MANN));
         demo.put(base.plusDays(1), CareDay.fullDay(base.plusDays(1), CareParty.MANN));
-        demo.put(base.plusDays(2), CareDay.switchDay(base.plusDays(2), CareParty.MANN, CareParty.FRAU));
+        // Wechseltag MANN->FRAU: Mann gibt um 16:00 ab -> Label "(bis 16:00)"
+        demo.put(base.plusDays(2), CareDay.switchDay(base.plusDays(2), CareParty.MANN, CareParty.FRAU, LocalTime.of(16, 0)));
         demo.put(base.plusDays(3), CareDay.fullDay(base.plusDays(3), CareParty.FRAU));
         demo.put(base.plusDays(4), CareDay.fullDay(base.plusDays(4), CareParty.FRAU));
         LocalDate today = now.toLocalDate();
-        demo.putIfAbsent(today,             CareDay.switchDay(today, CareParty.FRAU, CareParty.MANN));
-        demo.putIfAbsent(today.plusDays(1), CareDay.fullDay(today.plusDays(1), CareParty.FRAU));
+        // Wechseltag FRAU->MANN: Mann übernimmt um 16:00 -> Icon = MANN (secondHalf), Label "(ab 16:00)".
+        // Bewusst put() (nicht putIfAbsent), damit der Wechseltag einen evtl. zuvor aus dem base-Raster
+        // gesetzten Ganztag für heute überschreibt und das Label "(ab 16:00)" im Demo-Bild erscheint.
+        demo.put(today,             CareDay.switchDay(today, CareParty.FRAU, CareParty.MANN, LocalTime.of(16, 0)));
+        demo.put(today.plusDays(1), CareDay.fullDay(today.plusDays(1), CareParty.FRAU));
 
         RenderData renderData = buildRenderData(now, todayEvents, tomorrowEvents, weatherDays, demo);
 

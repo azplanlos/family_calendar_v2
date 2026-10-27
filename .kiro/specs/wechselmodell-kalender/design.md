@@ -181,23 +181,25 @@ package de.goForFun.familienkalender.model;
 /**
  * Betreuungsinformation für genau einen Kalendertag.
  *
- * Normaler Tag: switchDay == false, fullDay != null, firstHalf == secondHalf == fullDay.
+ * Normaler Tag: switchDay == false, fullDay != null, firstHalf == secondHalf == fullDay, switchTime == null.
  * Wechseltag:   switchDay == true,  fullDay == null,
- *               firstHalf = Partei des endenden Blocks,
- *               secondHalf = Partei des beginnenden Folgeblocks.
+ *               firstHalf  = abgebende Partei (vor der Übergabe),
+ *               secondHalf = übernehmende Partei (nach der Übergabe),
+ *               switchTime = Uhrzeit der Übergabe aus dem getimten Wechsel-Event.
  */
 public record CareDay(
         LocalDate date,
         CareParty fullDay,     // null an Wechseltagen
-        CareParty firstHalf,   // erste Tageshälfte
-        CareParty secondHalf,  // zweite Tageshälfte
-        boolean switchDay
+        CareParty firstHalf,   // erste Tageshälfte (vor der Übergabe)
+        CareParty secondHalf,  // zweite Tageshälfte (nach der Übergabe)
+        boolean switchDay,
+        LocalTime switchTime   // Übergabezeit am Wechseltag; null an normalen Tagen
 ) {
     public static CareDay fullDay(LocalDate date, CareParty party) {
-        return new CareDay(date, party, party, party, false);
+        return new CareDay(date, party, party, party, false, null);
     }
-    public static CareDay switchDay(LocalDate date, CareParty first, CareParty second) {
-        return new CareDay(date, null, first, second, true);
+    public static CareDay switchDay(LocalDate date, CareParty first, CareParty second, LocalTime switchTime) {
+        return new CareDay(date, null, first, second, true, switchTime);
     }
 
     /** Für das Betreuungs-Icon maßgebliche Partei (R5.3/R5.4): bei Wechseltag die zweite Hälfte. */
@@ -252,49 +254,50 @@ public record RenderData(
 
 ## Key Algorithm: Block-Erkennung und Wechseltag-Ableitung
 
-Der `CareScheduleProvider` arbeitet rein auf ganztägigen Custody-Events. Pseudocode:
+Der `CareScheduleProvider` verarbeitet die Events des Wechselmodell-Feeds in zwei Kategorien: **ganztägige Betreuungsblöcke** („Lukas bei …“, `VALUE=DATE`) und **getimte Wechsel-Events** („Wechsel zu …“, mit Uhrzeit). Die Blöcke liefern die Ganztagspartei je Tag; die getimten Wechsel-Events markieren explizit den Wechseltag samt Uhrzeit und übernehmender Partei.
 
 ```
 buildSchedule(custodyEvents, maleMatch):
-    # 1) Events -> Blöcke (ein VEVENT = ein Block über [DTSTART, DTEND))
-    blocks = []
+    blocks = []            # ganztägige Betreuungsblöcke
+    switchEvents = []      # getimte Wechsel-Events
     for e in custodyEvents:
         if e.startTime == null or e.endTime == null: continue
-        startDate = e.startTime.toLocalDate()
-        endExcl   = e.endTime.toLocalDate()           # halboffen; Parser liefert DTEND.atStartOfDay()
-        if !endExcl.isAfter(startDate): endExcl = startDate.plusDays(1)   # Robustheit: mind. 1 Tag
-        party = summaryContainsIgnoreCase(e.summary, maleMatch) ? MANN : FRAU   # R4.1/R4.2
-        tieKey = (startDate + "|" + endExcl + "|" + e.summary)  # R3.5: deterministischer Tie-Key
-        blocks.add(CareBlock(startDate, endExcl, party, tieKey))
-
-    # 2) Pro Tag den maßgeblichen Block bestimmen (Overlap-Determinismus, R3.5)
-    dayToBlock = {}            # LocalDate -> CareBlock
-    for b in blocks:
-        for d in [b.startInclusive .. b.endExclusive):     # R3.3/R3.4
-            cur = dayToBlock.get(d)
-            if cur == null or b.tieKey > cur.tieKey:        # lexikografisch größter Schlüssel gewinnt
-                dayToBlock[d] = b
-
-    # 3) CareDay je abgedecktem Tag ableiten
-    schedule = {}
-    for d in dayToBlock.keys():
-        b = dayToBlock[d]
-        isLastDayOfBlock = (d == b.lastDay())
-        if isLastDayOfBlock:
-            next = dayToBlock.get(d.plusDays(1))            # Folgeblock am Folgetag?
-            if next != null and next != b:                  # R4.3: unmittelbarer Folgeblock
-                schedule[d] = CareDay.switchDay(d, b.party, next.party)   # first=endend, second=Folge
-            else:
-                schedule[d] = CareDay.fullDay(d, b.party)   # R4.4: kein Wechseltag
+        if isAllDay(e):    # Start und Ende jeweils 00:00
+            startDate = e.startTime.toLocalDate()
+            endExcl   = e.endTime.toLocalDate()
+            if !endExcl.isAfter(startDate): endExcl = startDate.plusDays(1)
+            party  = summaryContainsIgnoreCase(e.summary, maleMatch) ? MANN : FRAU   # R4.1/R4.2
+            tieKey = startDate + '|' + endExcl + '|' + e.summary                     # R3.5
+            blocks.add(CareBlock(startDate, endExcl, party, tieKey))
         else:
-            schedule[d] = CareDay.fullDay(d, b.party)       # R4.5: innerer Tag = Ganztag
+            switchEvents.add(e)    # getimtes Wechsel-Event (R3.4)
+
+    # Pro Tag maßgeblichen Block bestimmen (Overlap-Determinismus, groesster tieKey, R3.5)
+    dayToBlock = {}
+    for b in blocks:
+        for d in [b.startInclusive .. b.endExclusive):     # R3.3
+            if dayToBlock[d] == null or b.tieKey > dayToBlock[d].tieKey: dayToBlock[d] = b
+
+    # Basis: jeder abgedeckte Tag = Ganztag mit Blockpartei (R4.5)
+    schedule = {}
+    for d, b in dayToBlock: schedule[d] = CareDay.fullDay(d, b.party)
+
+    # Getimte Wechsel-Events anwenden (R3.4/R4.3). Bei mehreren am selben Tag gewinnt das spaeteste.
+    switchByDay = latestByDay(switchEvents)
+    for d, e in switchByDay:
+        second = summaryContainsIgnoreCase(e.summary, maleMatch) ? MANN : FRAU   # uebernehmende Partei
+        block  = dayToBlock.get(d)
+        first  = block != null ? block.party : otherParty(second)               # abgebende Partei (Vormittag)
+        schedule[d] = CareDay.switchDay(d, first, second, e.startTime.toLocalTime())
     return schedule        # Tage ohne Eintrag => keine Partei (R4.6)
 ```
 
 Hinweise:
-- Schritt 2 ist **reihenfolgeunabhängig**: Die Zuordnung hängt nur vom größten `tieKey` ab, nicht von der Iterationsreihenfolge (R3.5). Zweimaliges Ausführen mit identischer Eingabe liefert identische Maps (R3.7).
-- „Folgeblock am Folgetag" wird über `dayToBlock.get(d+1)` bestimmt. Grenzt derselbe Block weiter an (zusammenhängend über mehrere VEVENTs desselben Blocks gibt es nicht – ein VEVENT = ein Block), ist `d` kein letzter Tag. Ein Wechseltag entsteht nur, wenn am Folgetag ein **anderer** Block maßgeblich ist.
-- `summaryContainsIgnoreCase` nutzt `summary.toLowerCase(ROOT).contains(maleMatch.toLowerCase(ROOT))`; leeres `summary` ⇒ enthält Kennung nicht ⇒ `FRAU`.
+- Die Block-Zuordnung je Tag ist **reihenfolgeunabhängig** (größter `tieKey`, R3.5); zweimaliges Ausführen liefert identische Maps inkl. Wechsel_Uhrzeit (R3.7).
+- Ein **Wechseltag** entsteht ausschließlich durch ein getimtes Wechsel-Event an diesem Tag (nicht mehr aus aneinandergrenzenden Blöcken abgeleitet). `secondHalf` = die im Wechsel-Event (`Wechsel zu …`) benannte übernehmende Partei; `firstHalf` = die Ganztagspartei dieses Tages aus den Blöcken (abgebende Seite am Vormittag). Fehlt für den Tag ein Block, wird `firstHalf` auf die Gegenpartei der übernehmenden gesetzt.
+- `switchTime` = Uhrzeit aus `DTSTART` des Wechsel-Events (z. B. 16:00; am DST-Sonderfall auch 01:00).
+- `isAllDay(e)` prüft Start und Ende auf Mitternacht (00:00); getimte Wechsel-Events (z. B. 16:00–16:15) sind damit klar von den Blöcken unterschieden.
+- `summaryContainsIgnoreCase` nutzt `summary.toLowerCase(ROOT).contains(maleMatch.toLowerCase(ROOT))`; leeres `summary` ⇒ `FRAU`.
 
 ## Components and Interfaces: Rendering-Integration
 
@@ -370,6 +373,7 @@ Die Überschrift wird über `FontHelper.drawString(..., Aligment.RIGHT, ...)` re
 - Icon-Box: quadratisch, Kantenlänge `ICON = 16 px`, am rechten Spaltenrand ausgerichtet: linke obere Ecke bei `(x + width - ICON, headerBaselineTop)`, wobei `headerBaselineTop` so gewählt ist, dass das Icon vertikal mittig zur Überschriftzeile liegt (`DAY_EVENTS_Y_START + 5 - ICON + 3` ≈ Oberkante der Textzeile).
 - Die Überschrift wird rechtsbündig in den um die Iconbreite verkürzten Bereich `[x, x + width - (ICON + 4)]` gezeichnet, d. h. der Text endet unmittelbar links vom Icon; Icon und Text liegen auf einer Linie und kollidieren nicht. Bei `iconParty == null` bleibt die Überschrift wie bisher über die volle Breite (R5.9 – „übrige Darstellung unverändert").
 - Events beginnen unverändert erst bei `spanningEndY`/`eventY` (vertikal unterhalb) → keine Überlappung mit Events (R5.8).
+- Wechsel-Label (R5.10): An einem Wechseltag, an dem der Mann beteiligt ist, wird **über** der Icon-Box eine kleine Zeile (Schriftgröße ~9 px) rechtsbündig am Spaltenrand gezeichnet: „(bis HH:mm)“, wenn `firstHalf == MANN` (Mann gibt ab), bzw. „(ab HH:mm)“, wenn `secondHalf == MANN` (Mann übernimmt); `HH:mm` ist die `switchTime`. An normalen Tagen oder wenn der Mann an keiner Hälfte beteiligt ist, entfällt das Label. Die Zeile liegt oberhalb von `iconTop` und überlappt weder die Wochentag-Überschrift noch das Icon.
 
 Icon-Zeichnung – **WC-Schild-Piktogramme** (eindeutige Toiletten-Symbolik) statt Gender-Symbolen, ausschließlich Schwarz/`COLOR_RED`/transparent, vektoriell, **kein Antialiasing-Grau** (R5.7). Mann = rot (passt zur roten Monatsrasterung), Frau = schwarz. Beide teilen sich denselben runden Kopf; der Körper unterscheidet die Parteien wie auf WC-Schildern eindeutig:
 
@@ -529,7 +533,7 @@ Die testbare Logik (`CareScheduleProvider`, URL-Validierung, Icon-Auswahl, Highl
 
 ### Property 6: Block- und Wechseltag-Invariante
 
-*Für jede* Folge von Betreuungsblöcken gilt für jeden abgedeckten Tag `d`: Ist `d` nicht der letzte Tag seines maßgeblichen Blocks, so ist `d` ein Ganztag mit der Blockpartei (`switchDay == false`, `fullDay == Blockpartei`). Ist `d` der letzte Tag und beginnt am Tag `d+1` ein anderer maßgeblicher Block, so ist `d` ein Wechseltag mit `firstHalf == Partei des endenden Blocks` und `secondHalf == Partei des Folgeblocks`; andernfalls ist `d` ein Ganztag mit der Blockpartei.
+*Für jede* Menge aus ganztägigen Betreuungsblöcken und getimten Wechsel-Events gilt für jeden abgedeckten Tag `d`: Liegt für `d` **kein** Wechsel-Event vor, so ist `d` ein Ganztag mit der Partei des maßgeblichen Blocks (`switchDay == false`, `fullDay == Blockpartei`). Liegt für `d` **ein** Wechsel-Event vor, so ist `d` ein Wechseltag (`switchDay == true`) mit `secondHalf == übernehmende Partei des Wechsel-Events`, `firstHalf == Ganztagspartei des Tages aus den Blöcken` (bzw. Gegenpartei der übernehmenden, falls kein Block den Tag abdeckt) und `switchTime == Uhrzeit des Wechsel-Events`.
 
 **Validates: Requirements 4.3, 4.4, 4.5**
 
@@ -580,6 +584,12 @@ Die testbare Logik (`CareScheduleProvider`, URL-Validierung, Icon-Auswahl, Highl
 *Für jede* Mann-Wochenend-Zelle gilt nach der Zeichenreihenfolge (graues Wochenend-Raster zuerst, rote Mann-Schraffur danach): Jeder Pixel der Zelle hat ausschließlich einen der drei erlaubten Paletten-Indizes (transparent, schwarz, `COLOR_RED`) – es entsteht keine Mischfarbe und keine Graustufe. An jedem Pixel, das sowohl das graue als auch das rote Raster setzen würde, ist der resultierende Index `COLOR_RED` (rot gewinnt, da zuletzt gezeichnet).
 
 **Validates: Requirements 6.10**
+
+### Property 15: Wechsel-Label aus Mann-Sicht
+
+*Für jeden* `CareDay` gilt für das über dem Icon angezeigte Wechsel-Label: Ist der Tag kein Wechseltag oder ist der Mann an keiner Tageshälfte beteiligt oder fehlt die `switchTime`, so ist das Label leer (kein Text). Ist der Tag ein Wechseltag mit `firstHalf == MANN` und `secondHalf != MANN`, so lautet das Label `(bis HH:mm)`; ist `secondHalf == MANN` und `firstHalf != MANN`, so lautet es `(ab HH:mm)` – jeweils mit der `switchTime` im 24-Stunden-Format `HH:mm`.
+
+**Validates: Requirements 5.10**
 
 ## Testing Strategy
 
