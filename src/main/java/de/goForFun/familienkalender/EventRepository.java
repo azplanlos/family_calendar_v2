@@ -224,8 +224,13 @@ public class EventRepository {
                 // Starttag eines mehrtägigen Events: mit Original-Startzeit anzeigen
                 result.add(event);
             } else if (eventEndDate.equals(day)) {
-                // Endtag eines mehrtägigen Events: von 00:00 bis Endzeit anzeigen
-                if (event.endTime().isAfter(dayStart)) {
+                // Endtag eines mehrtägigen Events: von 00:00 bis Endzeit anzeigen.
+                // Sonderfall reines Übernacht-Event (Spanne genau Vortag -> dieser Tag):
+                // nur anzeigen, wenn es nach 08:00 endet – ein kurzes Event, das früh morgens
+                // endet (z.B. 23:00 -> 02:00), soll am Folgetag NICHT erscheinen.
+                boolean isOvernightEndDay = eventStartDate.equals(day.minusDays(1));
+                LocalDateTime minimumEnd = isOvernightEndDay ? threshold : dayStart;
+                if (event.endTime().isAfter(minimumEnd)) {
                     result.add(new Event(
                             event.participants(),
                             dayStart,
