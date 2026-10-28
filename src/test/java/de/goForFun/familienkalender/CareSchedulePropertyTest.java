@@ -250,10 +250,21 @@ class CareSchedulePropertyTest {
                     .as("day %s: switchTime = Uhrzeit des Wechsel-Events", day)
                     .isEqualTo(se.time);
 
-            Block cover = blockCovering(scenario.blocks, day);
-            CareParty expectedFirst = (cover != null) ? cover.party : otherParty(se.party);
+            // firstHalf = abgebende Partei = Ganztagspartei des VORTAGS (Block des Vortags).
+            // Fehlt ein Vortags-Block, fällt die Implementierung auf den Block dieses Tages
+            // (sofern != übernehmende Partei) bzw. die Gegenpartei der übernehmenden zurück.
+            Block prevCover = blockCovering(scenario.blocks, day.minusDays(1));
+            CareParty expectedFirst;
+            if (prevCover != null) {
+                expectedFirst = prevCover.party;
+            } else {
+                Block sameCover = blockCovering(scenario.blocks, day);
+                expectedFirst = (sameCover != null && sameCover.party != se.party)
+                        ? sameCover.party
+                        : otherParty(se.party);
+            }
             assertThat(cd.firstHalf())
-                    .as("day %s: firstHalf = Blockpartei (bzw. Gegenpartei der übernehmenden)", day)
+                    .as("day %s: firstHalf = abgebende Partei (Vortags-Block)", day)
                     .isEqualTo(expectedFirst);
             assertThat(cd.fullDay())
                     .as("day %s: Wechseltag hat keine Ganztagspartei", day)

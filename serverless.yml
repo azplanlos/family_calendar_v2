@@ -58,3 +58,15 @@ functions:
       FONTCONFIG_PATH: /tmp/fontconfig
       API_SECRET: ${param:apiSecret}
       UPDATE_INTERVAL_MINUTES: ${self:custom.updateIntervalMinutes}
+
+  ServeAnonymizedFeed:
+    handler: de.goForFun.familienkalender.anonfeed.ServeAnonymizedFeed
+    timeout: 30
+    memorySize: 512
+    url:
+      authorizer: none
+    environment:
+      ANON_SOURCE_FEED: ${param:anonSourceFeed}
+      ANON_PARTICIPANT: ${param:anonParticipant, ''}
+      ANON_PLACEHOLDER: ${param:anonPlaceholder, 'Privat'}
+      ANON_API_SECRET: ${param:anonApiSecret, ''}

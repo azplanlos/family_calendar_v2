@@ -141,7 +141,8 @@ public class IcalParser {
                         baseEvent.summary(),
                         baseEvent.color(),
                         source,
-                        baseEvent.url()
+                        baseEvent.url(),
+                        baseEvent.uid()
                 ));
             }
         }

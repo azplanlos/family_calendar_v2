@@ -1,0 +1,311 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 `AnonConfig`-Record mit `fromEnv()`/`fromMap()` erstellen": [
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793185131297
+      },
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793185143981
+      },
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793185221602
+      }
+    ],
+    "1.2 Unit-Tests für `AnonConfig`-Edge-Cases schreiben": [
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793185131710
+      },
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793185225448
+      },
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793189249169
+      }
+    ],
+    "2.1 `FeedAnonymizer.isPrivate(VEvent)` und `anonymize(Calendar, AnonConfig)` implementieren": [
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793185132082
+      },
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793185226620
+      },
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793189250398
+      }
+    ],
+    "2.2 jqwik-`@Provide`-Generator für zufällige VCALENDAR-Inputs implementieren": [
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793185132318
+      },
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793189254860
+      },
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793189675867
+      }
+    ],
+    "2.3 Property-Test: Round-Trip-Parsebarkeit": [
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793185132504
+      },
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793189680325
+      },
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793191867753
+      }
+    ],
+    "2.4 Property-Test: Erhaltung von UID und Zeitfeldern": [
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793185132647
+      },
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793189681634
+      },
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793191869217
+      }
+    ],
+    "2.5 Property-Test: Erhaltung von VTIMEZONE und TZID": [
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793185132822
+      },
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793189682696
+      },
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793191870124
+      }
+    ],
+    "2.6 Property-Test: Private-Events leaken keinen Inhalt": [
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793185132973
+      },
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793189684016
+      },
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793191871584
+      }
+    ],
+    "2.7 Property-Test: Public-Passthrough ist wertidentisch": [
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793185133157
+      },
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793191878950
+      },
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793192394143
+      }
+    ],
+    "2.8 Property-Test: CLASS-Klassifikation case-insensitiv und robust": [
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793185133361
+      },
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793191880215
+      },
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793192395618
+      }
+    ],
+    "2.9 Property-Test: Idempotenz der Anonymisierung": [
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793185133517
+      },
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793191881373
+      },
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793192397118
+      }
+    ],
+    "2.10 Property-Test: X-WR-CALNAME Escaping-Round-Trip": [
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793185133676
+      },
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793191882638
+      }
+    ],
+    "2.11 Beispiel-Tests für konkrete Transformation (Fixture)": [
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793185133889
+      },
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793191883623
+      },
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793192397769
+      }
+    ],
+    "3. Checkpoint – Transformation absichern": [
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793185134031
+      }
+    ],
+    "4.1 Handler-Skelett, Auth und Fehler→Status-Mapping implementieren": [
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793185134209
+      },
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793189255765
+      },
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793189675047
+      }
+    ],
+    "4.2 Quellfeed-Fetch mit 10 s Read-Timeout und ical4j-Parsing verdrahten": [
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793185134381
+      },
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793189684940
+      },
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793191872709
+      }
+    ],
+    "4.3 Beispiel-Tests für Handler-Verhalten schreiben": [
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793185134570
+      }
+    ],
+    "4.4 Startup-Validierungs- und Separations-Tests schreiben": [
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793185134745
+      }
+    ],
+    "5. Checkpoint – Handler absichern": [
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793185134930
+      }
+    ],
+    "6.1 Funktion `ServeAnonymizedFeed` mit Function URL und `ANON_*`-Variablen eintragen": [
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793185135106
+      }
+    ],
+    "6.2 Inspektionstest für `serverless.yml` schreiben": [
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793185135690
+      }
+    ],
+    "7. Finale Verifikation und Nicht-Regression des Device-Pfads": [
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793185136014
+      }
+    ],
+    "1. `AnonConfig`-Konfigurations-Holder implementieren": [
+      {
+        "executionId": "b42a11bc-7f1b-4227-9875-8bd33a1512ec",
+        "chatSessionId": "sess_dba2096d-958a-4853-90c1-30e6c6c47d4e",
+        "timestamp": 1793189249469
+      }
+    ]
+  }
+}

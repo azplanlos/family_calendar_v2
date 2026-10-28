@@ -137,7 +137,7 @@ class CustodyActivationTest {
         // der Schedule leer, sodass weder Icon noch Monatskalender-Hervorhebung
         // Daten erhält.
         Map<LocalDate, CareDay> schedule =
-                new CareScheduleProvider(List.<Event>of(), "Andreas Zöllner").buildSchedule();
+                new CareScheduleProvider(List.<Event>of(), "Max Mustermann").buildSchedule();
         assertThat(schedule).isEmpty();
     }
 

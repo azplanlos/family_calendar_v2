@@ -23,7 +23,12 @@ public interface IcalMapping {
     @Mapping(target = "color", expression = "java(extractColor(vEvent))")
     @Mapping(target = "source", expression = "java(de.goForFun.familienkalender.model.EventSource.CALENDAR)")
     @Mapping(target = "url", expression = "java(extractUrl(vEvent))")
+    @Mapping(target = "uid", expression = "java(extractUid(vEvent))")
     Event mapVeventEvent(VEvent vEvent);
+
+    default String extractUid(VEvent vEvent) {
+        return vEvent.getUid().map(u -> u.getValue()).orElse(null);
+    }
 
     List<String> mapAttendees(List<Attendee> value);
 

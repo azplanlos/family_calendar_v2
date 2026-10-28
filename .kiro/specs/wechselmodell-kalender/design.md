@@ -256,6 +256,8 @@ public record RenderData(
 
 Der `CareScheduleProvider` verarbeitet die Events des Wechselmodell-Feeds in zwei Kategorien: **ganztägige Betreuungsblöcke** („Lukas bei …“, `VALUE=DATE`) und **getimte Wechsel-Events** („Wechsel zu …“, mit Uhrzeit). Die Blöcke liefern die Ganztagspartei je Tag; die getimten Wechsel-Events markieren explizit den Wechseltag samt Uhrzeit und übernehmender Partei.
 
+Die Event-Klassifikation erfolgt **über das UID-Präfix** des wechselplan.de-Feeds (robuster als Titeltext): `wp-care-…` und `wp-vacation-…` sind Betreuungsblöcke (Letztere decken Urlaubszeiträume ab und zählen als normale Betreuung), `wp-handover-…` sind getimte Wechsel-Events, und alle anderen `wp-*`-Typen (insb. `wp-schoolvac-…` für `Schulferien: …`) werden bei der Partei-Bestimmung **ignoriert**. Fehlt die UID (fremde Feeds), gilt ein Fallback: getimt ⇒ Wechsel, ganztägig ⇒ Betreuungsblock, offensichtliche `Schulferien:`-Titel ausgenommen.
+
 ```
 buildSchedule(custodyEvents, maleMatch):
     blocks = []            # ganztägige Betreuungsblöcke
@@ -286,15 +288,16 @@ buildSchedule(custodyEvents, maleMatch):
     switchByDay = latestByDay(switchEvents)
     for d, e in switchByDay:
         second = summaryContainsIgnoreCase(e.summary, maleMatch) ? MANN : FRAU   # uebernehmende Partei
-        block  = dayToBlock.get(d)
-        first  = block != null ? block.party : otherParty(second)               # abgebende Partei (Vormittag)
+        prev   = dayToBlock.get(d.minusDays(1))                                  # Block des VORTAGS
+        if prev != null: first = prev.party                                      # abgebende Partei
+        else:            first = (dayToBlock[d] != null and dayToBlock[d].party != second) ? dayToBlock[d].party : otherParty(second)
         schedule[d] = CareDay.switchDay(d, first, second, e.startTime.toLocalTime())
     return schedule        # Tage ohne Eintrag => keine Partei (R4.6)
 ```
 
 Hinweise:
 - Die Block-Zuordnung je Tag ist **reihenfolgeunabhängig** (größter `tieKey`, R3.5); zweimaliges Ausführen liefert identische Maps inkl. Wechsel_Uhrzeit (R3.7).
-- Ein **Wechseltag** entsteht ausschließlich durch ein getimtes Wechsel-Event an diesem Tag (nicht mehr aus aneinandergrenzenden Blöcken abgeleitet). `secondHalf` = die im Wechsel-Event (`Wechsel zu …`) benannte übernehmende Partei; `firstHalf` = die Ganztagspartei dieses Tages aus den Blöcken (abgebende Seite am Vormittag). Fehlt für den Tag ein Block, wird `firstHalf` auf die Gegenpartei der übernehmenden gesetzt.
+- Ein **Wechseltag** entsteht ausschließlich durch ein getimtes Wechsel-Event an diesem Tag (nicht aus aneinandergrenzenden Blöcken abgeleitet). `secondHalf` = die im Wechsel-Event (`Wechsel zu …`) benannte übernehmende Partei; `firstHalf` = die **abgebende** Partei = Ganztagspartei des **Vortags** aus den Blöcken. Bei Mitternachts-Übergaben (DTSTART 00:00) deckt der Block des DTSTART-Tages bereits die neue Partei ab, daher wird bewusst der Vortag herangezogen. Fehlt ein Vortags-Block, fällt `firstHalf` auf den Block dieses Tages (sofern ungleich der übernehmenden) bzw. die Gegenpartei der übernehmenden zurück.
 - `switchTime` = Uhrzeit aus `DTSTART` des Wechsel-Events (z. B. 16:00; am DST-Sonderfall auch 01:00).
 - `isAllDay(e)` prüft Start und Ende auf Mitternacht (00:00); getimte Wechsel-Events (z. B. 16:00–16:15) sind damit klar von den Blöcken unterschieden.
 - `summaryContainsIgnoreCase` nutzt `summary.toLowerCase(ROOT).contains(maleMatch.toLowerCase(ROOT))`; leeres `summary` ⇒ `FRAU`.
@@ -533,7 +536,7 @@ Die testbare Logik (`CareScheduleProvider`, URL-Validierung, Icon-Auswahl, Highl
 
 ### Property 6: Block- und Wechseltag-Invariante
 
-*Für jede* Menge aus ganztägigen Betreuungsblöcken und getimten Wechsel-Events gilt für jeden abgedeckten Tag `d`: Liegt für `d` **kein** Wechsel-Event vor, so ist `d` ein Ganztag mit der Partei des maßgeblichen Blocks (`switchDay == false`, `fullDay == Blockpartei`). Liegt für `d` **ein** Wechsel-Event vor, so ist `d` ein Wechseltag (`switchDay == true`) mit `secondHalf == übernehmende Partei des Wechsel-Events`, `firstHalf == Ganztagspartei des Tages aus den Blöcken` (bzw. Gegenpartei der übernehmenden, falls kein Block den Tag abdeckt) und `switchTime == Uhrzeit des Wechsel-Events`.
+*Für jede* Menge aus ganztägigen Betreuungsblöcken und getimten Wechsel-Events gilt für jeden abgedeckten Tag `d`: Liegt für `d` **kein** Wechsel-Event vor, so ist `d` ein Ganztag mit der Partei des maßgeblichen Blocks (`switchDay == false`, `fullDay == Blockpartei`). Liegt für `d` **ein** Wechsel-Event vor, so ist `d` ein Wechseltag (`switchDay == true`) mit `secondHalf == übernehmende Partei des Wechsel-Events`, `firstHalf == Ganztagspartei des Vortags aus den Blöcken` (abgebende Seite; Fallback: Block dieses Tages, falls ungleich der übernehmenden, sonst Gegenpartei der übernehmenden) und `switchTime == Uhrzeit des Wechsel-Events`.
 
 **Validates: Requirements 4.3, 4.4, 4.5**
 
