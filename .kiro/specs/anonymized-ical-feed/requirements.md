@@ -15,6 +15,7 @@ Die Funktion umfasst vier Bausteine:
 1. **Bereitstellung** eines neuen HTTP-Endpunkts (AWS Lambda mit Function URL), der den anonymisierten iCal-Feed ausliefert.
 2. **Einlesen** des Outlook_Source_Feed über die bestehende iCal-Infrastruktur (ical4j) bzw. durch Transformation auf iCal-Ebene.
 3. **Anonymisierung** privater Events durch Ersetzen von Titel und Inhaltsfeldern unter Beibehaltung von Datum, Uhrzeit und Kennung.
+   Zusätzlich werden Events, die in der Vergangenheit liegen oder deren Status auf „frei“ steht, gar nicht erst in den ausgelieferten Feed übernommen.
 4. **FamilyWall-Zuordnung** des Participant über den iCal-Kalendernamen, sodass der abonnierte Kalender in FamilyWall einem Mitglied zugeordnet werden kann.
 
 ### Abgrenzung zu FamilyWall-Bordmitteln
@@ -39,6 +40,8 @@ Hinweis: Inhalte aus den oben verlinkten FamilyWall-Quellen wurden zur Einhaltun
 - **Anonymisierter_Platzhalter (Anonymized_Placeholder)**: Der neutrale Ersatztext, der bei einem Private_Event als `SUMMARY` gesetzt wird; über die Umgebungsvariable `ANON_PLACEHOLDER` konfigurierbar, mit Vorgabewert „Privat".
 - **Inhaltsfelder (Content_Fields)**: Die Eigenschaften eines `VEVENT`, die Rückschlüsse auf den Terminzweck erlauben: `DESCRIPTION`, `LOCATION`, `URL`, `ATTENDEE`, `ORGANIZER`.
 - **Zeitfelder (Time_Fields)**: Die Eigenschaften `DTSTART`, `DTEND` bzw. `DURATION` sowie `RRULE`, `RDATE`, `EXDATE` und `RECURRENCE-ID`, die Zeitpunkt, Dauer und Wiederholung eines Events bestimmen.
+- **Frei_Status (Free_Status)**: Ein `VEVENT` gilt als „frei“, WHERE seine `TRANSP`-Eigenschaft den Wert `TRANSPARENT` trägt ODER seine `X-MICROSOFT-CDO-BUSYSTATUS`-Eigenschaft den Wert `FREE` trägt (Vergleich ohne Berücksichtigung der Groß-/Kleinschreibung, getrimmt). Solche Events blockieren keine Zeit und werden nicht in den anonymisierten Feed übernommen.
+- **Vergangenes_Event (Past_Event)**: Ein nicht wiederkehrendes `VEVENT`, dessen Ende (`DTEND`; ersatzweise `DTSTART` bzw. bei Ganztags-Events `DTSTART` + 1 Tag) vor dem aktuellen Zeitpunkt (Jetzt) liegt. Ein Event mit `RRULE` (Serientermin) gilt nie allein aufgrund eines vergangenen `DTSTART` als Vergangenes_Event.
 - **VTIMEZONE**: iCal-Komponente, die eine Zeitzonendefinition enthält und von Events über den TZID-Parameter referenziert wird.
 - **iCal_Kalendername (X-WR-CALNAME)**: Die iCal-Kalendereigenschaft `X-WR-CALNAME`, die FamilyWall als Name des abonnierten Kalenders anzeigt.
 - **CreateKalenderImage**: Bestehende Lambda-Funktion (EventBridge-getriggert), die das e-ink-Kalenderbild erzeugt und PNG + BIN nach S3 lädt. Sie nutzt die Original-Informationen des Outlook-Feeds.
@@ -142,3 +145,16 @@ Hinweis: Inhalte aus den oben verlinkten FamilyWall-Quellen wurden zur Einhaltun
 1. THE serverless.yml SHALL innerhalb der bestehenden Serverless-Konfiguration eine neue Lambda-Funktion für den Anonymized_Feed_Endpoint mit einer Function URL definieren.
 2. THE serverless.yml SHALL die Umgebungsvariablen `ANON_SOURCE_FEED`, `ANON_PARTICIPANT`, `ANON_PLACEHOLDER` und `ANON_API_SECRET` an die Anonymized_Feed_Endpoint-Funktion übergeben.
 3. IF beim Start der Anonymized_Feed_Endpoint-Funktion eine der erforderlichen Umgebungsvariablen `ANON_SOURCE_FEED`, `ANON_PARTICIPANT`, `ANON_PLACEHOLDER` oder `ANON_API_SECRET` nicht gesetzt oder leer ist, THEN THE Anonymized_Feed_Endpoint SHALL die Initialisierung abbrechen und eine Fehlermeldung ausgeben, die die fehlende Umgebungsvariable benennt.
+
+### Requirement 9: Filterung vergangener und als frei markierter Events
+
+**User Story:** Als Participant möchte ich, dass im anonymisierten Feed nur relevante Belegungen erscheinen, damit vergangene Termine und als „frei“ markierte Zeiten FamilyWall nicht unnötig belasten oder Belegung vortäuschen.
+
+#### Acceptance Criteria
+
+1. WHEN ein `VEVENT` ein Vergangenes_Event ist, THE Anonymized_Feed SHALL dieses Event nicht in den ausgelieferten Feed übernehmen.
+2. WHEN ein `VEVENT` ein Frei_Status-Event ist, THE Anonymized_Feed SHALL dieses Event nicht in den ausgelieferten Feed übernehmen, unabhängig davon, ob es privat oder öffentlich ist.
+3. THE Anonymized_Feed SHALL den Vergangenheitsbezug am Ende des Events festmachen: ein Event, dessen Ende (`DTEND`; ersatzweise `DTSTART`, bei Ganztags-Events `DTSTART` + 1 Tag) zum aktuellen Zeitpunkt oder davor liegt, SHALL ausgelassen werden; ein zu diesem Zeitpunkt noch laufendes oder künftiges Event SHALL übernommen werden.
+4. WHERE ein `VEVENT` eine `RRULE` besitzt (Serientermin), THE Anonymized_Feed SHALL es nicht allein aufgrund eines in der Vergangenheit liegenden `DTSTART` als Vergangenes_Event auslassen, sondern anhand des Frei_Status und - sofern bestimmbar - des Endes der Serie entscheiden; im Zweifel SHALL das Serien-Event übernommen werden.
+5. THE Anonymized_Feed SHALL einen `TRANSP`-Wert `TRANSPARENT` oder einen `X-MICROSOFT-CDO-BUSYSTATUS`-Wert `FREE` (jeweils getrimmt, ohne Berücksichtigung der Groß-/Kleinschreibung) als Frei_Status werten; fehlen beide Eigenschaften oder tragen sie andere Werte (z. B. `OPAQUE`, `BUSY`, `TENTATIVE`, `OOF`), SHALL das Event als belegt gelten und - vorbehaltlich der übrigen Regeln - übernommen werden.
+6. WHEN ein Event wegen Vergangenheit oder Frei_Status ausgelassen wird, THE Anonymized_Feed SHALL den erzeugten Feed dennoch gültig nach RFC 5545 halten und die übrigen Events unverändert ausliefern.

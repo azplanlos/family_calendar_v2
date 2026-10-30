@@ -11,6 +11,12 @@ import net.fortuna.ical4j.model.component.VTimeZone;
 import net.fortuna.ical4j.model.property.Summary;
 import net.fortuna.ical4j.model.property.XProperty;
 
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.temporal.Temporal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -38,6 +44,15 @@ public class FeedAnonymizer {
     /** CLASS-Werte, die ein Event als privat kennzeichnen (Requirement 2.4). */
     private static final String CLASS_PRIVATE = "private";
     private static final String CLASS_CONFIDENTIAL = "confidential";
+
+    /** iCal-Eigenschaft für Frei/Belegt (RFC 5545): TRANSPARENT = frei (Requirement 9.5). */
+    private static final String TRANSP = "TRANSP";
+    private static final String TRANSP_TRANSPARENT = "transparent";
+    /** Outlook-Erweiterung für Belegt-Status: FREE = frei (Requirement 9.5). */
+    private static final String X_MS_BUSYSTATUS = "X-MICROSOFT-CDO-BUSYSTATUS";
+    private static final String BUSYSTATUS_FREE = "free";
+    /** Wiederholungsregel – markiert Serientermine (Requirement 9.4). */
+    private static final String RRULE = "RRULE";
 
     /**
      * Kalender-Properties der Quelle, die unverändert in den Ziel-Kalender übernommen werden.
@@ -80,15 +95,111 @@ public class FeedAnonymizer {
     }
 
     /**
+     * Prüft, ob ein {@link VEvent} als „frei" markiert ist (Requirement 9.2, 9.5).
+     *
+     * <p>Frei genau dann, wenn {@code TRANSP} den Wert {@code TRANSPARENT} trägt ODER
+     * {@code X-MICROSOFT-CDO-BUSYSTATUS} den Wert {@code FREE} trägt (jeweils getrimmt,
+     * case-insensitiv). Fehlen beide bzw. tragen sie andere Werte (z. B. {@code OPAQUE},
+     * {@code BUSY}, {@code TENTATIVE}, {@code OOF}), gilt das Event als belegt.
+     */
+    public static boolean isFree(VEvent event) {
+        if (propertyEquals(event, TRANSP, TRANSP_TRANSPARENT)) {
+            return true;
+        }
+        return propertyEquals(event, X_MS_BUSYSTATUS, BUSYSTATUS_FREE);
+    }
+
+    private static boolean propertyEquals(VEvent event, String name, String expectedLower) {
+        return event.getProperty(name)
+                .map(Property::getValue)
+                .filter(v -> v != null)
+                .map(v -> v.trim().toLowerCase(Locale.ROOT).equals(expectedLower))
+                .orElse(false);
+    }
+
+    /**
+     * Prüft, ob ein {@link VEvent} ein Vergangenes_Event relativ zu {@code now} ist
+     * (Requirement 9.1, 9.3, 9.4).
+     *
+     * <p>Ein Serientermin (mit {@code RRULE}) gilt nie allein aufgrund eines vergangenen
+     * {@code DTSTART} als vergangen und wird daher nie über diese Methode ausgeschlossen.
+     * Andernfalls wird das Event-Ende bestimmt ({@code DTEND}; ersatzweise {@code DTSTART},
+     * bei Ganztags-Events {@code DTSTART} + 1 Tag) und mit {@code now} verglichen: Ende
+     * {@code <= now} ⇒ vergangen. Lässt sich kein Ende bestimmen, gilt das Event als
+     * nicht vergangen (konservativ: behalten).
+     */
+    public static boolean isPast(VEvent event, Instant now) {
+        if (event.getProperty(RRULE).isPresent()) {
+            return false; // Serientermine nicht allein wegen vergangenem DTSTART auslassen
+        }
+        Instant end = eventEndInstant(event);
+        return end != null && !end.isAfter(now);
+    }
+
+    /**
+     * Bestimmt das Ende eines Events als {@link Instant}. Nutzt {@code DTEND}; fehlt es, wird
+     * bei getimten Events {@code DTSTART} (Null-Dauer), bei Ganztags-Events {@code DTSTART}+1 Tag
+     * verwendet. Liefert {@code null}, wenn kein verwertbares Datum vorliegt.
+     */
+    private static Instant eventEndInstant(VEvent event) {
+        Temporal start = temporalOf(event, Property.DTSTART);
+        Temporal end = temporalOf(event, Property.DTEND);
+        if (end != null) {
+            return toInstant(end, false);
+        }
+        if (start == null) {
+            return null;
+        }
+        boolean allDay = start instanceof LocalDate;
+        return toInstant(start, allDay); // all-day: +1 Tag; timed: Null-Dauer (Start==Ende)
+    }
+
+    /** Liest eine Datums-Eigenschaft (DTSTART/DTEND) als ical4j-Temporal, oder null. */
+    @SuppressWarnings("unchecked")
+    private static Temporal temporalOf(VEvent event, String name) {
+        return event.getProperty(name)
+                .filter(prop -> prop instanceof net.fortuna.ical4j.model.property.DateProperty)
+                .map(prop -> ((net.fortuna.ical4j.model.property.DateProperty<Temporal>) prop).getDate())
+                .orElse(null);
+    }
+
+    /**
+     * Konvertiert ein ical4j-Datum in einen {@link Instant}.
+     *
+     * @param addAllDayBuffer bei {@code true} und einem reinen {@link LocalDate} wird +1 Tag
+     *                        gerechnet (Ende eines Ganztags-Events ohne DTEND)
+     */
+    private static Instant toInstant(Temporal t, boolean addAllDayBuffer) {
+        if (t instanceof ZonedDateTime zdt) {
+            return zdt.toInstant();
+        }
+        if (t instanceof java.time.OffsetDateTime odt) {
+            return odt.toInstant();
+        }
+        if (t instanceof LocalDateTime ldt) {
+            return ldt.atZone(ZoneId.systemDefault()).toInstant();
+        }
+        if (t instanceof LocalDate ld) {
+            LocalDate day = addAllDayBuffer ? ld.plusDays(1) : ld;
+            return day.atStartOfDay(ZoneId.systemDefault()).toInstant();
+        }
+        if (t instanceof Instant inst) {
+            return inst;
+        }
+        return null;
+    }
+
+    /**
      * Transformiert den Quell-Kalender in einen neuen, anonymisierten Kalender.
      *
      * @param source der geparste Quell-{@link Calendar}
      * @param config die Konfiguration (liefert u. a. Platzhalter und Participant)
-     * @return ein NEUER {@link Calendar} mit anonymisierten/durchgereichten Events
+     * @param now    Referenzzeitpunkt für den Vergangenheits-Filter (Requirement 9)
+     * @return ein NEUER {@link Calendar} mit anonymisierten/durchgereichten/gefilterten Events
      */
-    public Calendar anonymize(Calendar source, AnonConfig config) {
+    public Calendar anonymize(Calendar source, AnonConfig config, Instant now) {
         PropertyList calendarProperties = buildCalendarProperties(source, config);
-        ComponentList<CalendarComponent> components = buildComponents(source, config);
+        ComponentList<CalendarComponent> components = buildComponents(source, config, now);
         return new Calendar(calendarProperties, components);
     }
 
@@ -138,7 +249,7 @@ public class FeedAnonymizer {
      * Baut die Komponentenliste des Ziel-Kalenders: jede {@code VTIMEZONE} unverändert
      * (Requirement 1.7, 6.5), gefolgt von den transformierten {@code VEVENT}-Komponenten.
      */
-    private ComponentList<CalendarComponent> buildComponents(Calendar source, AnonConfig config) {
+    private ComponentList<CalendarComponent> buildComponents(Calendar source, AnonConfig config, Instant now) {
         List<CalendarComponent> result = new ArrayList<>();
 
         for (CalendarComponent component : source.<CalendarComponent>getComponents(Component.VTIMEZONE)) {
@@ -147,7 +258,7 @@ public class FeedAnonymizer {
 
         for (CalendarComponent component : source.<CalendarComponent>getComponents(Component.VEVENT)) {
             VEvent sourceEvent = (VEvent) component;
-            transformEvent(sourceEvent, config).ifPresent(result::add);
+            transformEvent(sourceEvent, config, now).ifPresent(result::add);
         }
 
         return new ComponentList<>(result);
@@ -164,10 +275,22 @@ public class FeedAnonymizer {
      *   <li>Nicht-privat → wertidentische Übernahme der Kopie (Requirement 2.5, 3.1–3.4).</li>
      * </ul>
      */
-    private Optional<VEvent> transformEvent(VEvent sourceEvent, AnonConfig config) {
+    private Optional<VEvent> transformEvent(VEvent sourceEvent, AnonConfig config, Instant now) {
         if (!hasReadableUidAndDtStart(sourceEvent)) {
             LOG.info("VEVENT ohne einlesbare UID oder DTSTART wird ausgelassen: "
                     + describeEvent(sourceEvent));
+            return Optional.empty();
+        }
+
+        // Status "frei" → auslassen (Requirement 9.2), gilt für private und öffentliche Events.
+        if (isFree(sourceEvent)) {
+            LOG.info("VEVENT mit Status frei wird ausgelassen: " + describeEvent(sourceEvent));
+            return Optional.empty();
+        }
+
+        // Vergangenes Event → auslassen (Requirement 9.1/9.3); Serientermine bleiben (9.4).
+        if (isPast(sourceEvent, now)) {
+            LOG.info("Vergangenes VEVENT wird ausgelassen: " + describeEvent(sourceEvent));
             return Optional.empty();
         }
 

@@ -19,6 +19,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -97,7 +98,7 @@ public class ServeAnonymizedFeed implements RequestHandler<APIGatewayV2HTTPEvent
         // 3. Abruf + Transformation; Netzwerk-/Parsefehler → 502 (Requirement 1.5)
         try {
             Calendar source = fetchAndParse(sourceFeed);
-            Calendar anonymized = anonymizer.anonymize(source, config);
+            Calendar anonymized = anonymizer.anonymize(source, config, Instant.now());
             String body = serialize(anonymized);
 
             Map<String, String> headers = new HashMap<>();

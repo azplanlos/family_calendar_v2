@@ -125,11 +125,19 @@ Reine, I/O-freie Transformation – das Herzstück und die Haupttestoberfläche.
 
 ```java
 public class FeedAnonymizer {
-    // Nimmt den geparsten Quell-Calendar + Konfiguration, liefert einen NEUEN Calendar.
-    Calendar anonymize(Calendar source, AnonConfig config);
+    // Nimmt den geparsten Quell-Calendar + Konfiguration + Referenzzeitpunkt 'now',
+    // liefert einen NEUEN Calendar. 'now' wird vom Handler als Instant.now() injiziert
+    // (reine, testbare Transformation ohne verdeckten Uhrzugriff).
+    Calendar anonymize(Calendar source, AnonConfig config, java.time.Instant now);
 
     // true  <=> CLASS-Wert (case-insensitive getrimmt) ist PRIVATE oder CONFIDENTIAL
     static boolean isPrivate(VEvent event);
+
+    // true  <=> TRANSP=TRANSPARENT ODER X-MICROSOFT-CDO-BUSYSTATUS=FREE (case-insensitive, getrimmt)
+    static boolean isFree(VEvent event);
+
+    // true  <=> kein RRULE UND Event-Ende (DTEND; sonst DTSTART, all-day +1 Tag) <= now
+    static boolean isPast(VEvent event, java.time.Instant now);
 }
 ```
 
@@ -142,8 +150,11 @@ Verhalten von `anonymize`:
 - Übernimmt **jede** `VTIMEZONE`-Komponente der Quelle unverändert (Requirement 1.7, 6.5).
 - Iteriert über alle `VEVENT`-Komponenten:
   - `UID` oder `DTSTART` nicht einlesbar → Event **auslassen** + Log (Requirement 6.4).
+  - `isFree` (Status „frei“: `TRANSP=TRANSPARENT` oder `X-MICROSOFT-CDO-BUSYSTATUS=FREE`) → Event **auslassen** (Requirement 9.2, 9.5).
+  - `isPast` (kein `RRULE` und Event-Ende ≤ `now`) → Event **auslassen** (Requirement 9.1, 9.3, 9.4). Serientermine mit `RRULE` werden nicht allein wegen eines vergangenen `DTSTART` ausgelassen.
   - `isPrivate` → **anonymisieren** (Private-Transformation, s. Datenfluss-Tabelle).
   - sonst → **wertidentisch** übernehmen (Public-Passthrough).
+  - Die Reihenfolge ist: zuerst UID/DTSTART-Validität, dann Frei-/Vergangenheits-Filter, dann Privat/Public-Transformation. Frei- und Vergangenheits-Filter gelten für private **und** öffentliche Events gleichermaßen.
 - Da ical4j-Properties mutable sind und nicht zwischen Komponenten geteilt werden dürfen,
   arbeitet der Anonymizer auf einer **Kopie** des jeweiligen `VEvent` (`vevent.copy()`),
   entfernt bzw. ersetzt dort Properties und fügt die Kopie dem Ziel-`Calendar` hinzu. Public
@@ -409,6 +420,14 @@ Weitere Entscheidungen:
 Zweigleisiger Ansatz aus Beispiel-/Unit-Tests und Property-Tests; PBT ist hier anwendbar, weil
 der `FeedAnonymizer` eine reine Transformation mit klaren Invarianten (Round-Trip, Erhaltung,
 Idempotenz) über einen großen Eingaberaum (beliebige `VCALENDAR`) ist.
+
+### Property 9: Filterung vergangener und als frei markierter Events
+
+*Für jeden* Quell-`Calendar` und *jeden* Referenzzeitpunkt `now` gilt im erzeugten Feed: (a) Kein ausgeliefertes `VEVENT` hat Frei_Status (`TRANSP=TRANSPARENT` bzw. `X-MICROSOFT-CDO-BUSYSTATUS=FREE`). (b) Kein ausgeliefertes nicht-wiederkehrendes `VEVENT` ist ein Vergangenes_Event (Ende ≤ `now`). (c) Jedes belegte, nicht-vergangene Event mit gültiger `UID`/`DTSTART` bleibt erhalten; ein Serientermin (`RRULE`) wird nicht allein wegen eines vergangenen `DTSTART` ausgelassen.
+
+**Invariante:** Für generierte Events mit variierenden `TRANSP`/`X-MICROSOFT-CDO-BUSYSTATUS`-Werten, timed/all-day Zeiten relativ zu `now` und optionaler `RRULE` enthält `anonymize(src, cfg, now)` genau die erwartete Teilmenge.
+
+**Validates: Requirements 9.1, 9.2, 9.3, 9.4, 9.5, 9.6**
 
 ### Property-Tests (jqwik)
 

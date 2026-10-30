@@ -54,7 +54,7 @@ class FeedAnonymizerUidTimePropertyTest extends CalendarArbitraries {
 
     @net.jqwik.api.Property(tries = 100)
     void uidAndTimeFieldsArePreservedPerEvent(@ForAll("randomCalendars") Calendar source) {
-        Calendar anonymized = anonymizer.anonymize(source, config);
+        Calendar anonymized = anonymizer.anonymize(source, config, java.time.Instant.parse("2000-01-01T00:00:00Z"));
         Calendar reparsed = reparse(anonymized.toString());
 
         // Nur gültige Quell-Events (mit einlesbarer UID + DTSTART) sind zu erhalten (6.4).

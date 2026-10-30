@@ -47,7 +47,7 @@ class FeedAnonymizerPublicPassthroughPropertyTest extends CalendarArbitraries {
     @Property(tries = 100)
     void publicEventsAreCarriedOverValueIdentically(@ForAll("calendarSpecs") CalendarSpec spec) {
         Calendar source = buildCalendar(spec);
-        Calendar anonymized = anonymizer.anonymize(source, config);
+        Calendar anonymized = anonymizer.anonymize(source, config, java.time.Instant.parse("2000-01-01T00:00:00Z"));
 
         // Der FeedAnonymizer iteriert die Quell-VEVENTs der Reihe nach, lässt ungültige Events
         // (ohne einlesbare UID/DTSTART) aus und hängt die übrigen in gleicher Reihenfolge an.

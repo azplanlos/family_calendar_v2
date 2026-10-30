@@ -367,6 +367,17 @@ The feed mixes several event types, distinguished by their `UID` prefix:
 
 The party per day is derived from the `SUMMARY` via the `CUSTODY_MALE_MATCH` substring; a handover's first half is the previous day's (handing-over) party, the second half the party named in the handover event. If you need to double-check feed specifics, the source is [wechselplan.de](https://wechselplan.de).
 
+## Anonymized iCal Feed
+
+The `ServeAnonymizedFeed` Lambda (Function URL) re-serves an Outlook/outlook.com iCal feed with private event details stripped, so it can be subscribed in FamilyWall without leaking what a private appointment is about. Events whose `CLASS` is `PRIVATE`/`CONFIDENTIAL` keep their time, duration, UID and timezone but get their `SUMMARY` replaced by a placeholder and their content fields (`DESCRIPTION`, `LOCATION`, `URL`, `ATTENDEE`, `ORGANIZER`, `ATTACH`) removed. Public events pass through unchanged. The device image (`CreateKalenderImage`) keeps using the original titles — anonymization only affects this outbound feed.
+
+Two filters keep the feed lean (see spec Requirement 9):
+
+- **Past events are dropped.** An event is omitted once its end (`DTEND`; else `DTSTART`, all-day `DTSTART` + 1 day) is at or before "now". Ongoing and future events are kept. Recurring events (`RRULE`) are never dropped just because their `DTSTART` is in the past.
+- **Free events are dropped.** An event counts as free when `TRANSP:TRANSPARENT` or `X-MICROSOFT-CDO-BUSYSTATUS:FREE` (case-insensitive); such events block no time and are omitted (private or public alike).
+
+Configuration via `ANON_SOURCE_FEED` (required), `ANON_PARTICIPANT` (sets `X-WR-CALNAME`), `ANON_PLACEHOLDER` (default `Privat`) and `ANON_API_SECRET` (optional `?token=` guard; empty = open access). See `.env.example` and `serverless.yml`.
+
 ## Technology Stack
 
 | Component | Technology |

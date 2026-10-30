@@ -51,7 +51,7 @@ class FeedAnonymizerPrivateLeakPropertyTest extends CalendarArbitraries {
     @Property(tries = 200)
     void privateEventsLeakNoContent(@ForAll("calendarSpecs") CalendarSpec spec) {
         Calendar source = buildCalendar(spec);
-        Calendar anonymized = anonymizer.anonymize(source, config);
+        Calendar anonymized = anonymizer.anonymize(source, config, java.time.Instant.parse("2000-01-01T00:00:00Z"));
 
         // Erwartete Original-Summaries der gültigen Private-Events, per UID zuordenbar.
         Map<String, String> privateSummariesByUid = new HashMap<>();

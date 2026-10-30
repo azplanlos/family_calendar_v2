@@ -69,7 +69,7 @@ class FeedAnonymizerCalNamePropertyTest extends CalendarArbitraries {
                 .as("AnonConfig muss den getrimmten Participant übernehmen")
                 .contains(trimmed);
 
-        Calendar anonymized = anonymizer.anonymize(source, config);
+        Calendar anonymized = anonymizer.anonymize(source, config, java.time.Instant.parse("2000-01-01T00:00:00Z"));
 
         // Feed muss parsebar bleiben (RFC-5545-konformes Escaping/Faltung durch ical4j).
         Calendar reparsed = reparse(anonymized.toString());

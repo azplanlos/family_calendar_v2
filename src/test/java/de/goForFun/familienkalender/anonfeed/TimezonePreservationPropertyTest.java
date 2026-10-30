@@ -41,7 +41,7 @@ class TimezonePreservationPropertyTest extends CalendarArbitraries {
     void vtimezoneAndTzidArePreserved(@ForAll("randomCalendars") Calendar source) {
         AnonConfig config = AnonConfig.fromMap(Map.of());
 
-        Calendar anonymized = anonymizer.anonymize(source, config);
+        Calendar anonymized = anonymizer.anonymize(source, config, java.time.Instant.parse("2000-01-01T00:00:00Z"));
         Calendar reparsed = reparse(anonymized.toString());
 
         // 1) Jede von einem Event referenzierte TZID hat eine VTIMEZONE im Ziel.

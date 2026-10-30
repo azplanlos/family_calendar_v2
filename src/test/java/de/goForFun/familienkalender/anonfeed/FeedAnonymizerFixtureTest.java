@@ -66,7 +66,7 @@ class FeedAnonymizerFixtureTest {
         @Test
         void publicEventBleibtWertgleich() {
             Calendar source = CalendarArbitraries.loadFixture();
-            Calendar anonymized = anonymizer.anonymize(source, config);
+            Calendar anonymized = anonymizer.anonymize(source, config, java.time.Instant.parse("2000-01-01T00:00:00Z"));
 
             VEvent sourceEvent = eventByUid(source, PUBLIC_UID);
             VEvent outEvent = eventByUid(anonymized, PUBLIC_UID);
@@ -108,7 +108,7 @@ class FeedAnonymizerFixtureTest {
         @Test
         void privateEventWirdAnonymisiert() {
             Calendar source = CalendarArbitraries.loadFixture();
-            Calendar anonymized = anonymizer.anonymize(source, config);
+            Calendar anonymized = anonymizer.anonymize(source, config, java.time.Instant.parse("2000-01-01T00:00:00Z"));
 
             VEvent sourceEvent = eventByUid(source, PRIVATE_UID);
             VEvent outEvent = eventByUid(anonymized, PRIVATE_UID);
@@ -163,7 +163,7 @@ class FeedAnonymizerFixtureTest {
         @Test
         void veventOhneUidUndDtStartFehltImOutput() {
             Calendar source = parse(ICS_WITH_INVALID_EVENT);
-            Calendar anonymized = anonymizer.anonymize(source, config);
+            Calendar anonymized = anonymizer.anonymize(source, config, java.time.Instant.parse("2000-01-01T00:00:00Z"));
 
             List<VEvent> outEvents = events(anonymized);
 

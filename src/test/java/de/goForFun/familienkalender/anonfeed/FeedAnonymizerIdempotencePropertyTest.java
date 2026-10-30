@@ -79,9 +79,9 @@ class FeedAnonymizerIdempotencePropertyTest extends CalendarArbitraries {
     @Property(tries = 100)
     void secondPassDoesNotChangeTheFeed(@ForAll("randomCalendars") Calendar source) {
         // Erster Durchlauf.
-        Calendar once = anonymizer.anonymize(source, config);
+        Calendar once = anonymizer.anonymize(source, config, java.time.Instant.parse("2000-01-01T00:00:00Z"));
         // Zweiter Durchlauf über den (neu eingelesenen) bereits anonymisierten Feed.
-        Calendar twice = anonymizer.anonymize(reparse(once.toString()), config);
+        Calendar twice = anonymizer.anonymize(reparse(once.toString()), config, java.time.Instant.parse("2000-01-01T00:00:00Z"));
 
         List<VEvent> onceEvents = events(once);
         List<VEvent> twiceEvents = events(twice);
