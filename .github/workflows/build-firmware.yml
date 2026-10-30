@@ -35,7 +35,9 @@ jobs:
           python-version: '3.11'
 
       - name: Install PlatformIO
-        run: pip install platformio
+        # Pin PlatformIO Core to a version known to work with espressif32 @ ~8.0.0
+        # (platform requires Core >= 6.1.19; verified locally against 6.2.0).
+        run: pip install "platformio==6.2.0"
 
       - name: Build firmware
         run: pio run -d firmware

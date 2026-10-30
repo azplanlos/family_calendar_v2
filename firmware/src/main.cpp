@@ -12,6 +12,7 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include <WiFiClient.h>
 #include <WiFiClientSecure.h>
 #include <SPI.h>
 

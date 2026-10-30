@@ -9,12 +9,12 @@
     <version>1.0-SNAPSHOT</version>
 
     <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
-        <maven.compiler.release>21</maven.compiler.release>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
+        <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <org.mapstruct.version>1.6.3</org.mapstruct.version>
-        <org.projectlombok.version>1.18.46</org.projectlombok.version>
+        <org.projectlombok.version>1.18.48</org.projectlombok.version>
         <net.jqwik.version>1.10.2</net.jqwik.version>
     </properties>
 
@@ -107,14 +107,14 @@
             <dependency>
                 <groupId>org.junit</groupId>
                 <artifactId>junit-bom</artifactId>
-                <version>6.1.0-M1</version>
+                <version>6.1.3</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
             <dependency>
                 <groupId>com.amazonaws</groupId>
                 <artifactId>aws-lambda-java-core</artifactId>
-                <version>1.4.0</version>
+                <version>1.4.1</version>
             </dependency>
             <dependency>
                 <groupId>com.amazonaws</groupId>
@@ -124,23 +124,23 @@
             <dependency>
                 <groupId>org.junit.jupiter</groupId>
                 <artifactId>junit-jupiter-api</artifactId>
-                <version>6.1.0-M1</version>
+                <version>6.1.3</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
-                <version>33.6.0-jre</version>
+                <version>33.7.2-jre</version>
             </dependency>
             <dependency>
                 <groupId>com.amazonaws</groupId>
                 <artifactId>aws-lambda-java-log4j2</artifactId>
-                <version>1.6.2</version>
+                <version>1.6.5</version>
             </dependency>
             <dependency>
                 <groupId>software.amazon.awssdk</groupId>
                 <artifactId>bom</artifactId>
-                <version>2.42.29</version>
+                <version>2.57.7</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -153,7 +153,7 @@
             <dependency>
                 <groupId>org.assertj</groupId>
                 <artifactId>assertj-core</artifactId>
-                <version>4.0.0-M1</version>
+                <version>3.27.7</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -166,12 +166,12 @@
             <dependency>
                 <groupId>org.mnode.ical4j</groupId>
                 <artifactId>ical4j</artifactId>
-                <version>4.2.5</version>
+                <version>4.4.0</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-lang3</artifactId>
-                <version>3.20.0</version>
+                <version>3.21.0</version>
             </dependency>
             <dependency>
                 <groupId>org.mapstruct</groupId>
@@ -181,7 +181,7 @@
             <dependency>
                 <groupId>de.focus-shift</groupId>
                 <artifactId>jollyday-jackson</artifactId>
-                <version>2.12.0</version>
+                <version>2.23.0</version>
             </dependency>
             <dependency>
                 <groupId>com.google.zxing</groupId>
@@ -211,6 +211,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.16.0</version>
                 <configuration>
                     <annotationProcessorPaths>
                         <path>
@@ -238,7 +239,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.5.2</version>
+                <version>3.6.1</version>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

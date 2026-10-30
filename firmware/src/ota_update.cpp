@@ -10,6 +10,7 @@
  */
 
 #include <Arduino.h>
+#include <WiFiClient.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <Update.h>
