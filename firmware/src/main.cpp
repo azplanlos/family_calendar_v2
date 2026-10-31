@@ -188,8 +188,10 @@ bool connectWiFi() {
 // ============================================================
 bool fetchImage() {
     const DeviceConfig& cfg = configGet();
-    HTTPClient http;
+    // Declaration order matters: HTTPClient's destructor still uses the client,
+    // so the client must be declared first (destroyed last).
     WiFiClientSecure secureClient;
+    HTTPClient http;
 
     // Skip certificate verification for Lambda Function URL
     // (alternatively, embed the Amazon Root CA for production use)
