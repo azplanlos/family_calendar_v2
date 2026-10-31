@@ -9,6 +9,7 @@ import de.goForFun.familienkalender.model.EventSource;
 import java.time.LocalDate;
 import java.time.Year;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 /**
@@ -69,7 +70,7 @@ public class HolidayProvider {
                 List.of(),
                 date.atStartOfDay(),
                 date.plusDays(1).atStartOfDay(),
-                holiday.getDescription(),
+                holiday.getDescription(Locale.GERMAN),
                 null,
                 EventSource.HOLIDAY,
                 null
