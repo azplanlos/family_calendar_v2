@@ -2,75 +2,91 @@
 
 A serverless family calendar system that renders events, weather, and a monthly overview onto a 3-color e-ink display (800x480, black/white/red). The system consists of a Java backend running on AWS Lambda and an ESP32-S3 firmware that drives the physical display.
 
+In addition, the backend publishes an **anonymized iCal feed** for [FamilyWall](https://www.familywall.com): a third Lambda function (`ServeAnonymizedFeed`) re-serves an [Outlook.com](https://outlook.com) calendar with private appointments reduced to a placeholder ("Privat"), while the e-ink display keeps showing the original titles. See [Anonymized iCal Feed](#anonymized-ical-feed) and [External Services](#external-services).
+
 > This is the successor to [family_calendar v1](https://github.com/Froschi1860/family_calendar). The v2 rewrite replaces the original architecture with a serverless backend, a dedicated ESP32 firmware with OTA updates, and a cleaner separation between image generation and display rendering.
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        AWS Cloud                            │
-│                                                             │
-│  EventBridge (every 6h)                                     │
-│       │                                                     │
-│       ▼                                                     │
-│  ┌─────────────────────┐      ┌────────────────────┐        │
-│  │ CreateKalenderImage │────▶ │   S3 Bucket        │       │
-│  │ (Lambda Handler)    │      │  - calendar.png    │        │
-│  │                     │      │  - calendar.bin    │        │
-│  └─────────────────────┘      └────────────────────┘        │
-│       │  Fetches:                       ▲                   │
-│       │  - iCal feeds                   │                   │
-│       │  - OpenWeatherMap               │                   │
-│       │  - Holidays (jollyday)          │                   │
-│       │                                 │                   │
-│  ┌─────────────────────┐                │                   │
-│  │ ServeCalendarImage  │ ───────────────┘                   │
-│  │ (Lambda Func. URL)  │  Reads calendar.bin from S3        │
-│  └─────────────────────┘                                    │
-│            ▲                                                │
-└────────────┼────────────────────────────────────────────────┘
-             │ HTTPS (Bearer Token)
-             │
-┌────────────┼───────────────────────┐
-│  ESP32-S3  │ (LOLIN S3 Pro)        │
-│            │                       │
-│  ┌─────────┴────────────────┐      │
-│  │ Firmware                 │      │
-│  │  - Fetch calendar.bin    │      │
-│  │  - Display on e-ink      │      │
-│  │  - Battery monitoring    │      │
-│  │  - OTA updates (GitHub)  │      │
-│  │  - Deep sleep            │      │
-│  └──────────────────────────┘      │
-│            │                       │
-│  ┌─────────┴────────────────┐      │
-│  │ 7.5" E-Ink Display       │      │
-│  │ 800x480, 3-color (BWR)   │      │
-│  └──────────────────────────┘      │
-└────────────────────────────────────┘
+ External sources
+ ┌──────────────┐ ┌─────────────┐ ┌──────────────┐ ┌──────────────┐ ┌───────────────┐
+ │ Family iCal  │ │ School /    │ │ Wechselmodell│ │ Outlook iCal │ │ OpenWeatherMap│
+ │ CALENDAR_FEED│ │ Vacation    │ │ CUSTODY_     │ │ ANON_SOURCE_ │ │ OneCall 3.0   │
+ │              │ │ iCal feeds  │ │ CALENDAR_FEED│ │ FEED         │ │               │
+ └──────┬───────┘ └──────┬──────┘ └──────┬───────┘ └──┬────────┬──┘ └───────┬───────┘
+        │                │               │            │        │            │
+        └────────────────┴───────┬───────┴────────────┘        │            │
+                                 │   ┌─────────────────────────┼────────────┘
+┌────────────────────────────────┼───┼─────────────────────────┼──────────────────────┐
+│ AWS Cloud                      ▼   ▼                         ▼                      │
+│                                                                                     │
+│  EventBridge ──▶ ┌─────────────────────────┐        ┌──────────────────────────┐    │
+│  (every 6h)      │ CreateKalenderImage     │        │ ServeAnonymizedFeed      │    │
+│                  │  - aggregates all feeds │        │ (Function URL, ?token=)  │    │
+│                  │  - Outlook events →     │        │  - private events →      │    │
+│                  │    ANON_PARTICIPANT     │        │    ANON_PLACEHOLDER      │    │
+│                  │  - holidays (jollyday)  │        │  - drops past/free events│    │
+│                  │  - renders 800x480 BWR  │        │  - X-WR-CALNAME =        │    │
+│                  └────────────┬────────────┘        │    ANON_PARTICIPANT      │    │
+│                               │ putObject           │  - no S3 access          │    │
+│                               ▼                     └────────────┬─────────────┘    │
+│                  ┌─────────────────────────┐                     │                  │
+│                  │ S3 Bucket               │                     │                  │
+│                  │  - calendar.png         │                     │                  │
+│                  │  - calendar.bin         │                     │                  │
+│                  └────────────┬────────────┘                     │                  │
+│                               │ getObject                        │                  │
+│                               ▼                                  │                  │
+│                  ┌─────────────────────────┐                     │                  │
+│                  │ ServeCalendarImage      │                     │                  │
+│                  │ (Function URL, Bearer)  │                     │                  │
+│                  │  + X-Next-Update-Seconds│                     │                  │
+│                  └────────────┬────────────┘                     │                  │
+└───────────────────────────────┼──────────────────────────────────┼──────────────────┘
+                                │ HTTPS (Bearer token)             │ ICS subscription
+                                ▼                                  ▼ (text/calendar)
+               ┌─────────────────────────────────┐        ┌──────────────────────────┐
+               │ ESP32-S3 (LOLIN S3 Pro)         │        │ FamilyWall               │
+               │  - fetch calendar.bin           │        │  external calendar,      │
+               │  - battery indicator            │        │  shared with the member  │
+               │  - OTA updates (GitHub)         │        │  ANON_PARTICIPANT        │
+               │  - deep sleep                   │        └──────────────────────────┘
+               │             │                   │
+               │  ┌──────────▼────────────────┐  │
+               │  │ 7.5" e-ink, 800x480, BWR  │  │
+               │  └───────────────────────────┘  │
+               └─────────────────────────────────┘
 ```
+
+Two views of the Outlook calendar come out of the same source: the **e-ink display shows the original titles** (assigned to `ANON_PARTICIPANT`), **FamilyWall receives the anonymized feed**.
 
 ### Backend (Java / AWS Lambda)
 
 The backend is a Java 21 application packaged as an uber-JAR and deployed to AWS Lambda via the Serverless Framework.
 
-**Two Lambda functions:**
+**Three Lambda functions:**
 
 1. **CreateKalenderImage** — Triggered every 6 hours by EventBridge. Fetches calendar events from multiple iCal feeds, loads weather data from OpenWeatherMap, and renders an 800x480 3-color bitmap. Uploads both a PNG (for browser preview) and a raw bitplane binary (`calendar.bin`) to S3.
 
 2. **ServeCalendarImage** — Exposed via a Lambda Function URL. Authenticates the ESP32 via Bearer token, reads `calendar.bin` from S3, and returns it with an `X-Next-Update-Seconds` header that tells the device how long to sleep.
 
+3. **ServeAnonymizedFeed** — Exposed via a Lambda Function URL. Re-serves an Outlook iCal feed for FamilyWall with private event details replaced by a placeholder (see [Anonymized iCal Feed](#anonymized-ical-feed)). Does not touch S3 or the device path.
+
 **Key components:**
 
 | Class | Responsibility |
 |-------|---------------|
-| `EventRepository` | Aggregates events from family iCal, school calendar, vacation feed, and public holidays |
+| `EventRepository` | Aggregates events from family iCal, school calendar, vacation feed, public holidays and (optionally) the original Outlook feed assigned to `ANON_PARTICIPANT` |
 | `IcalParser` | Parses iCal feeds using ical4j |
 | `IcalMapping` | MapStruct mapper from ical4j `VEvent` to internal `Event` model |
 | `HolidayProvider` | Public holidays via jollyday (configurable country/state) |
 | `WeatherService` | 3-day forecast from OpenWeatherMap OneCall API 3.0 |
 | `ImageRenderer` | Renders the 800x480 3-color image (header, day columns, weather, month calendar, footer) |
 | `BitplaneExporter` | Converts the rendered image into raw bitplane format for the e-ink display |
+| `anonfeed.ServeAnonymizedFeed` | Lambda handler for the anonymized FamilyWall feed (auth via `?token=`, error→status mapping, 10 s fetch timeout) |
+| `anonfeed.FeedAnonymizer` | Pure ical4j transformation: anonymizes private events, filters past/free events, sets `X-WR-CALNAME` |
+| `anonfeed.AnonConfig` | Reads and validates the `ANON_*` environment variables |
 
 ### Firmware (ESP32-S3 / PlatformIO)
 
@@ -88,6 +104,20 @@ The firmware runs on a **WeMos LOLIN S3 Pro** board connected to a Waveshare 7.5
 8. Enter deep sleep for the duration specified by the backend
 
 **Libraries:** GxEPD2 (e-paper driver), Adafruit GFX
+
+## External Services
+
+The backend integrates the following third-party services. None of them is required except the primary family iCal feed and OpenWeatherMap; each optional integration is switched off when its variable is empty.
+
+| Service | Used for | Configuration | Notes |
+|---------|----------|---------------|-------|
+| [Outlook.com](https://outlook.com) | Source of the personal calendar: rendered on the device (original titles) and re-served anonymized to FamilyWall | `ANON_SOURCE_FEED`, `ANON_PARTICIPANT` | Publish the calendar as an ICS link via *Settings → Calendar → Shared calendars → Publish a calendar* ([Microsoft: publishing Internet Calendars](https://support.microsoft.com/en-gb/office/introduction-to-publishing-internet-calendars-a25e68d6-695a-41c6-a701-103d44ba151d)). Choose the detail level that includes titles ("Can view all details"); otherwise the device only sees busy blocks. Private appointments are marked with `CLASS:PRIVATE`. |
+| [FamilyWall](https://www.familywall.com) | Family organizer app that subscribes to the anonymized feed | Function URL of `ServeAnonymizedFeed` (+ `?token=<ANON_API_SECRET>`) | Subscribing to an external ICS URL is a Premium feature ([FamilyWall: import from an external calendar](https://support.familywall.com/en/support/solutions/articles/47001250207-import-events-file-or-url-from-an-external-calendar)). Share the subscribed calendar with the member named in `ANON_PARTICIPANT`. |
+| [wechselplan.de](https://wechselplan.de) | Shared-custody (Wechselmodell) plan: care pictogram and shading of the father's days | `CUSTODY_CALENDAR_FEED`, `CUSTODY_MALE_MATCH` | Use the calendar subscription (ICS) link of your plan. See [Shared-Custody Calendar](#shared-custody-calendar-wechselmodell). |
+| [OpenWeatherMap](https://openweathermap.org/api/one-call-3) | 3-day weather forecast | `OPENWEATHER_API_KEY`, `OPENWEATHER_LAT`, `OPENWEATHER_LON` | Requires a One Call API 3.0 subscription. |
+| [feiertage-deutschland.de](https://www.feiertage-deutschland.de) | School vacation feed (default) | `VACATION_CALENDAR_FEED` | Any other vacation ICS feed works as well. |
+
+Public holidays are computed locally with [jollyday](https://github.com/focus-shift/jollyday) and need no external call.
 
 ## Prerequisites
 
@@ -170,6 +200,10 @@ serverless deploy --stage prod
 | `OPENWEATHER_LON` | Longitude for weather forecast | `11.5820` |
 | `API_SECRET` | Shared secret for ESP32 authentication (Bearer token) | |
 | `UPDATE_INTERVAL_MINUTES` | Minutes between scheduled image regenerations | `360` |
+| `ANON_SOURCE_FEED` | Outlook iCal feed URL. Served anonymized to FamilyWall **and** rendered un-anonymized on the device (optional for the device; required for `ServeAnonymizedFeed`) | `https://outlook.office365.com/owa/calendar/…/calendar.ics` |
+| `ANON_PARTICIPANT` | Person the Outlook events belong to: participant badge on the device and `X-WR-CALNAME` of the FamilyWall feed (optional) | `Andreas` |
+| `ANON_PLACEHOLDER` | Title that replaces private events in the FamilyWall feed (optional) | `Privat` |
+| `ANON_API_SECRET` | Optional `?token=` guard for the anonymized feed; empty = open access | |
 
 See `.env.example` for a local reference.
 
@@ -200,6 +234,10 @@ family_calendar_v2/
 │   ├── BitplaneExporter.java       # Image → raw bitplane conversion
 │   ├── WeatherService.java         # OpenWeatherMap integration
 │   ├── HolidayProvider.java        # Public holiday provider (jollyday)
+│   ├── anonfeed/                   # Anonymized FamilyWall feed (separate from device path)
+│   │   ├── ServeAnonymizedFeed.java  # Lambda handler: anonymized iCal feed
+│   │   ├── FeedAnonymizer.java       # ical4j transformation
+│   │   └── AnonConfig.java           # ANON_* configuration
 │   └── model/
 │       ├── Event.java              # Event record
 │       ├── EventSource.java        # CALENDAR | HOLIDAY | SCHOOL | VACATION
@@ -369,7 +407,7 @@ The party per day is derived from the `SUMMARY` via the `CUSTODY_MALE_MATCH` sub
 
 ## Anonymized iCal Feed
 
-The `ServeAnonymizedFeed` Lambda (Function URL) re-serves an Outlook/outlook.com iCal feed with private event details stripped, so it can be subscribed in FamilyWall without leaking what a private appointment is about. Events whose `CLASS` is `PRIVATE`/`CONFIDENTIAL` keep their time, duration, UID and timezone but get their `SUMMARY` replaced by a placeholder and their content fields (`DESCRIPTION`, `LOCATION`, `URL`, `ATTENDEE`, `ORGANIZER`, `ATTACH`) removed. Public events pass through unchanged. The device image (`CreateKalenderImage`) keeps using the original titles — anonymization only affects this outbound feed.
+The `ServeAnonymizedFeed` Lambda (Function URL) re-serves an [Outlook.com](https://outlook.com) iCal feed with private event details stripped, so it can be subscribed in [FamilyWall](https://www.familywall.com) without leaking what a private appointment is about. Events whose `CLASS` is `PRIVATE`/`CONFIDENTIAL` keep their time, duration, UID and timezone but get their `SUMMARY` replaced by a placeholder and their content fields (`DESCRIPTION`, `LOCATION`, `URL`, `ATTENDEE`, `ORGANIZER`, `ATTACH`) removed. Public events pass through unchanged. Anonymization only affects this outbound feed; the code lives in the separate package `de.goForFun.familienkalender.anonfeed` and never touches S3 or the device path.
 
 Two filters keep the feed lean (see spec Requirement 9):
 
@@ -378,7 +416,24 @@ Two filters keep the feed lean (see spec Requirement 9):
 
 Configuration via `ANON_SOURCE_FEED` (required), `ANON_PARTICIPANT` (sets `X-WR-CALNAME`), `ANON_PLACEHOLDER` (default `Privat`) and `ANON_API_SECRET` (optional `?token=` guard; empty = open access). See `.env.example` and `serverless.yml`.
 
-The device renderer (`CreateKalenderImage`) also reads `ANON_SOURCE_FEED` and `ANON_PARTICIPANT`: the original Outlook events are rendered **un-anonymized** as an additional feed alongside `CALENDAR_FEED` and assigned to `ANON_PARTICIPANT`. Only the FamilyWall feed is anonymized.
+To subscribe in FamilyWall ([how-to](https://support.familywall.com/en/support/solutions/articles/47001250207-import-events-file-or-url-from-an-external-calendar)), use the Function URL of `ServeAnonymizedFeed` (plus `?token=<ANON_API_SECRET>` if a secret is set) as external calendar URL and share the subscribed calendar with the member named in `ANON_PARTICIPANT`.
+
+### Outlook feed on the device
+
+The same source feeds two views:
+
+| View | Titles | Assignment |
+|------|--------|------------|
+| e-ink device (`CreateKalenderImage`) | **original**, including private events | every event gets exactly `ANON_PARTICIPANT` as participant badge |
+| FamilyWall (`ServeAnonymizedFeed`) | private events replaced by `ANON_PLACEHOLDER` | calendar named `ANON_PARTICIPANT` (`X-WR-CALNAME`) |
+
+On the device the Outlook feed is loaded **in addition** to `CALENDAR_FEED` over the same date range. Details (see spec Requirement 10):
+
+- Unassigned events of the family feed are still assigned to all family members — they are **not** attributed to `ANON_PARTICIPANT` because of the Outlook feed.
+- If `ANON_PARTICIPANT` is empty, the Outlook events keep their parsed attendees.
+- If `ANON_SOURCE_FEED` is empty or not a valid http(s) URL, the device renders as before, without an error.
+- If the Outlook feed cannot be loaded, an `Outlook-Feed: …` error is reported like other feed errors; the remaining feeds render normally.
+- Only events with a `TZID` (as Outlook publishes them) or all-day dates are expanded by `IcalParser`; floating or UTC-only times are currently skipped.
 
 ## Technology Stack
 
