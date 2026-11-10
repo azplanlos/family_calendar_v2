@@ -177,11 +177,11 @@ public class FeedAnonymizer {
             return odt.toInstant();
         }
         if (t instanceof LocalDateTime ldt) {
-            return ldt.atZone(ZoneId.systemDefault()).toInstant();
+            return ldt.atZone(de.goForFun.familienkalender.AppTimeZone.get()).toInstant();
         }
         if (t instanceof LocalDate ld) {
             LocalDate day = addAllDayBuffer ? ld.plusDays(1) : ld;
-            return day.atStartOfDay(ZoneId.systemDefault()).toInstant();
+            return day.atStartOfDay(de.goForFun.familienkalender.AppTimeZone.get()).toInstant();
         }
         if (t instanceof Instant inst) {
             return inst;

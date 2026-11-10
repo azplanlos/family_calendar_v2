@@ -318,8 +318,8 @@ public class EventRepository {
      * Gibt alle Events zurück, die in der angegebenen Range (inklusive Start und Ende) stattfinden.
      */
     public List<Event> getEventsForRange(LocalDate from, LocalDate to) {
-        ZonedDateTime rangeStart = from.atStartOfDay(ZoneId.systemDefault());
-        ZonedDateTime rangeEnd = to.plusDays(1).atStartOfDay(ZoneId.systemDefault());
+        ZonedDateTime rangeStart = from.atStartOfDay(AppTimeZone.get());
+        ZonedDateTime rangeEnd = to.plusDays(1).atStartOfDay(AppTimeZone.get());
 
         return allEvents.stream()
                 .filter(event -> eventOverlapsRange(event, rangeStart, rangeEnd))
@@ -394,9 +394,9 @@ public class EventRepository {
         if (event.startTime() == null) {
             return false;
         }
-        ZonedDateTime eventStart = event.startTime().atZone(ZoneId.systemDefault());
+        ZonedDateTime eventStart = event.startTime().atZone(AppTimeZone.get());
         ZonedDateTime eventEnd = event.endTime() != null
-                ? event.endTime().atZone(ZoneId.systemDefault())
+                ? event.endTime().atZone(AppTimeZone.get())
                 : eventStart.plusHours(1);
         return eventStart.isBefore(rangeEnd) && eventEnd.isAfter(rangeStart);
     }

@@ -1222,8 +1222,8 @@ public class ImageRenderer {
         // Version (bottom left)
         FontHelper.drawString(graphics, "v" + VersionInfo.getVersion(), Aligment.LEFT, terminalFont.get(), 10, COLOR_BLACK, 10, IMAGE_HEIGHT - 12, 200, 10);
 
-        // Last update (bottom right) – rendered in German locale and Europe/Berlin timezone
-        ZonedDateTime berlinTime = dt.atZone(ZoneId.of("Europe/Berlin"));
+        // Last update (bottom right) – rendered in German locale; dt is already in the configured app timezone
+        ZonedDateTime berlinTime = dt.atZone(AppTimeZone.get());
         String formattedTime = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM)
                 .withLocale(Locale.GERMANY)
                 .format(berlinTime);

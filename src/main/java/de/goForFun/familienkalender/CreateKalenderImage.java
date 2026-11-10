@@ -59,7 +59,7 @@ public class CreateKalenderImage implements RequestHandler<ScheduledEvent, Void>
         logger.log("EVENT TYPE: " + input.getClass());
 
         try {
-            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime now = LocalDateTime.now(AppTimeZone.get());
             LocalDate today = now.toLocalDate();
 
             // EventRepository sammelt iCal-Events, Schulkalender, Ferien und Feiertage zentral

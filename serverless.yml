@@ -34,6 +34,8 @@ functions:
           schedule: rate(${self:custom.updateIntervalMinutes} minutes)
     environment:
       THUMBNAIL_SIZE: 100
+      TIMEZONE: ${param:timezone, 'Europe/Berlin'}
+      TZ: ${param:timezone, 'Europe/Berlin'}
       FONTCONFIG_CACHE: /tmp/.cache/fontconfig
       FONTCONFIG_PATH: /tmp/fontconfig
       CALENDAR_FEED: ${param:calendarFeed}
@@ -68,6 +70,8 @@ functions:
     url:
       authorizer: none
     environment:
+      TIMEZONE: ${param:timezone, 'Europe/Berlin'}
+      TZ: ${param:timezone, 'Europe/Berlin'}
       ANON_SOURCE_FEED: ${param:anonSourceFeed}
       ANON_PARTICIPANT: ${param:anonParticipant, ''}
       ANON_PLACEHOLDER: ${param:anonPlaceholder, 'Privat'}

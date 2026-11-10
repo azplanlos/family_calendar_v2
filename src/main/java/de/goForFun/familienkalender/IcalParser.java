@@ -75,8 +75,8 @@ public class IcalParser {
      * @param source      die EventSource, die den geparsten Events zugewiesen wird
      */
     public List<Event> parse(InputStream inputStream, LocalDate from, LocalDate to, EventSource source) throws IOException, ParserException {
-        ZonedDateTime rangeStart = from.atStartOfDay(ZoneId.systemDefault());
-        ZonedDateTime rangeEnd = to.plusDays(1).atStartOfDay(ZoneId.systemDefault());
+        ZonedDateTime rangeStart = from.atStartOfDay(AppTimeZone.get());
+        ZonedDateTime rangeEnd = to.plusDays(1).atStartOfDay(AppTimeZone.get());
         return parseForPeriod(inputStream, rangeStart, rangeEnd, source);
     }
 
@@ -89,8 +89,8 @@ public class IcalParser {
      */
     @SuppressWarnings("unchecked")
     public List<Event> parse(InputStream inputStream, YearMonth month, EventSource source) throws IOException, ParserException {
-        ZonedDateTime monthStart = month.atDay(1).atStartOfDay(ZoneId.systemDefault());
-        ZonedDateTime monthEnd = month.plusMonths(1).atDay(1).atStartOfDay(ZoneId.systemDefault());
+        ZonedDateTime monthStart = month.atDay(1).atStartOfDay(AppTimeZone.get());
+        ZonedDateTime monthEnd = month.plusMonths(1).atDay(1).atStartOfDay(AppTimeZone.get());
         return parseForPeriod(inputStream, monthStart, monthEnd, source);
     }
 
@@ -121,10 +121,11 @@ public class IcalParser {
                 Object end = occurrence.getEnd();
 
                 if (start instanceof ZonedDateTime zdt) {
-                    occurrenceStart = zdt.toLocalDateTime();
+                    ZoneId appZone = AppTimeZone.get();
+                    occurrenceStart = zdt.withZoneSameInstant(appZone).toLocalDateTime();
                     occurrenceEnd = (end instanceof ZonedDateTime zdtEnd)
-                            ? zdtEnd.toLocalDateTime()
-                            : zdt.plusHours(1).toLocalDateTime();
+                            ? zdtEnd.withZoneSameInstant(appZone).toLocalDateTime()
+                            : zdt.plusHours(1).withZoneSameInstant(appZone).toLocalDateTime();
                 } else if (start instanceof LocalDate ld) {
                     occurrenceStart = ld.atStartOfDay();
                     occurrenceEnd = (end instanceof LocalDate ldEnd)

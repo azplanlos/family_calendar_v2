@@ -5,7 +5,7 @@ A serverless family calendar system that renders events, weather, and a monthly 
 In addition, the backend publishes an **anonymized iCal feed** for [FamilyWall](https://www.familywall.com): a third Lambda function (`ServeAnonymizedFeed`) re-serves an [Outlook.com](https://outlook.com) calendar with private appointments reduced to a placeholder ("Privat"), while the e-ink display keeps showing the original titles. See [Anonymized iCal Feed](#anonymized-ical-feed) and [External Services](#external-services).
 
 > This is the successor to [family_calendar v1](https://github.com/Froschi1860/family_calendar). The v2 rewrite replaces the original architecture with a serverless backend, a dedicated ESP32 firmware with OTA updates, and a cleaner separation between image generation and display rendering.
-
+a
 ## Architecture
 
 ```
@@ -195,6 +195,7 @@ serverless deploy --stage prod
 | `VACATION_CALENDAR_FEED` | School vacation feed (optional) | `https://www.feiertage-deutschland.de/kalender-download/ics/schulferien-bayern.ics` |
 | `HOLIDAY_COUNTRY` | ISO 3166-1 alpha-2 country code for public holidays | `de` |
 | `HOLIDAY_STATE` | State/region code for public holidays | `by` |
+| `TIMEZONE` | IANA time zone (e.g. `Europe/Berlin`) for "today", event ranges and the "letzte Aktualisierung" footer. Invalid values fall back to the default. In `serverless.yml` it is also passed as `TZ` to the JVM. | `Europe/Berlin` |
 | `OPENWEATHER_API_KEY` | OpenWeatherMap OneCall API 3.0 key | |
 | `OPENWEATHER_LAT` | Latitude for weather forecast | `48.1351` |
 | `OPENWEATHER_LON` | Longitude for weather forecast | `11.5820` |
