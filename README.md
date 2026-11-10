@@ -191,7 +191,7 @@ serverless deploy --stage prod
 | `CALENDAR_FEED` | Primary family iCal feed URL | `https://example.com/cal.ics` |
 | `SCHOOL_CALENDAR_FEED` | School calendar iCal feed (optional) | |
 | `CUSTODY_CALENDAR_FEED` | Shared-custody (Wechselmodell) iCal feed from [wechselplan.de](https://wechselplan.de) (optional) | |
-| `CUSTODY_MALE_MATCH` | Name substring identifying the father in the custody feed titles (e.g. `Andreas Zöllner`) | |
+| `CUSTODY_MALE_MATCH` | Name substring identifying the father in the custody feed titles (e.g. `Max Mustermann`) | |
 | `VACATION_CALENDAR_FEED` | School vacation feed (optional) | `https://www.feiertage-deutschland.de/kalender-download/ics/schulferien-bayern.ics` |
 | `HOLIDAY_COUNTRY` | ISO 3166-1 alpha-2 country code for public holidays | `de` |
 | `HOLIDAY_STATE` | State/region code for public holidays | `by` |
@@ -201,7 +201,7 @@ serverless deploy --stage prod
 | `API_SECRET` | Shared secret for ESP32 authentication (Bearer token) | |
 | `UPDATE_INTERVAL_MINUTES` | Minutes between scheduled image regenerations | `360` |
 | `ANON_SOURCE_FEED` | Outlook iCal feed URL. Served anonymized to FamilyWall **and** rendered un-anonymized on the device (optional for the device; required for `ServeAnonymizedFeed`) | `https://outlook.office365.com/owa/calendar/…/calendar.ics` |
-| `ANON_PARTICIPANT` | Person the Outlook events belong to: participant badge on the device and `X-WR-CALNAME` of the FamilyWall feed (optional) | `Andreas` |
+| `ANON_PARTICIPANT` | Person the Outlook events belong to: participant badge on the device and `X-WR-CALNAME` of the FamilyWall feed (optional) | `Max` |
 | `ANON_PLACEHOLDER` | Title that replaces private events in the FamilyWall feed (optional) | `Privat` |
 | `ANON_API_SECRET` | Optional `?token=` guard for the anonymized feed; empty = open access | |
 
@@ -398,8 +398,8 @@ The feed mixes several event types, distinguished by their `UID` prefix:
 
 | UID prefix | Meaning | Effect |
 |------------|---------|--------|
-| `wp-care-` | All-day care block ("Lukas bei …") | Assigns the day to the named party |
-| `wp-vacation-` | All-day vacation block ("Lukas: Urlaub – …") | Counts as normal care for the named party |
+| `wp-care-` | All-day care block ("Kind bei …") | Assigns the day to the named party |
+| `wp-vacation-` | All-day vacation block ("Kind: Urlaub – …") | Counts as normal care for the named party |
 | `wp-handover-` | Timed handover ("Wechsel zu …") | Marks a switch day with the handover time |
 | `wp-schoolvac-` | School holidays ("Schulferien: …") | Ignored for care determination |
 

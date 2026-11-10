@@ -254,7 +254,7 @@ public record RenderData(
 
 ## Key Algorithm: Block-Erkennung und Wechseltag-Ableitung
 
-Der `CareScheduleProvider` verarbeitet die Events des Wechselmodell-Feeds in zwei Kategorien: **ganztägige Betreuungsblöcke** („Lukas bei …“, `VALUE=DATE`) und **getimte Wechsel-Events** („Wechsel zu …“, mit Uhrzeit). Die Blöcke liefern die Ganztagspartei je Tag; die getimten Wechsel-Events markieren explizit den Wechseltag samt Uhrzeit und übernehmender Partei.
+Der `CareScheduleProvider` verarbeitet die Events des Wechselmodell-Feeds in zwei Kategorien: **ganztägige Betreuungsblöcke** („Kind bei …“, `VALUE=DATE`) und **getimte Wechsel-Events** („Wechsel zu …“, mit Uhrzeit). Die Blöcke liefern die Ganztagspartei je Tag; die getimten Wechsel-Events markieren explizit den Wechseltag samt Uhrzeit und übernehmender Partei.
 
 Die Event-Klassifikation erfolgt **über das UID-Präfix** des wechselplan.de-Feeds (robuster als Titeltext): `wp-care-…` und `wp-vacation-…` sind Betreuungsblöcke (Letztere decken Urlaubszeiträume ab und zählen als normale Betreuung), `wp-handover-…` sind getimte Wechsel-Events, und alle anderen `wp-*`-Typen (insb. `wp-schoolvac-…` für `Schulferien: …`) werden bei der Partei-Bestimmung **ignoriert**. Fehlt die UID (fremde Feeds), gilt ein Fallback: getimt ⇒ Wechsel, ganztägig ⇒ Betreuungsblock, offensichtliche `Schulferien:`-Titel ausgenommen.
 

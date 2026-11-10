@@ -22,7 +22,7 @@ Das Feature besitzt **keinen separaten Ein-/Aus-Schalter**. Es aktiviert sich au
 
 - **Wechselmodell_Kalender**: Funktionsbaustein, der pro Tag die betreuende Partei aus dem Wechselmodell_Feed bestimmt und darstellt.
 - **Wechselmodell_Feed (Custody_Feed)**: Externer iCal-Feed (RFC 5545) mit ganztägigen Betreuungsblöcken und getimten Wechsel-Events, der vom Betreiber gepflegt und über die ENV-Variable `CUSTODY_CALENDAR_FEED` als URL konfiguriert wird.
-- **Mann_Kennung (Male_Match)**: Konfigurierbarer Namens-Teilstring zur Identifizierung des Manns (z. B. „Andreas Zöllner"), über die ENV-Variable `CUSTODY_MALE_MATCH` konfiguriert.
+- **Mann_Kennung (Male_Match)**: Konfigurierbarer Namens-Teilstring zur Identifizierung des Manns (z. B. „Max Mustermann"), über die ENV-Variable `CUSTODY_MALE_MATCH` konfiguriert.
 - **Betreuende_Partei (Care_Party)**: Die an einem Tag oder einer Tageshälfte betreuende Person, einer von zwei Werten: `MANN` oder `FRAU`. Ein Tag ohne Betreuungs-Event hat keine Betreuende_Partei.
 - **Betreuungsblock (Care_Block)**: Die zusammenhängende Folge von Kalendertagen, die durch ein einzelnes Betreuungs_Event über den halboffenen Bereich `[DTSTART, DTEND)` abgedeckt wird und einer einzigen Betreuenden_Partei zugeordnet ist.
 - **Wechsel_Event (Switch_Event)**: Ein getimtes `VEVENT` im Wechselmodell_Feed (mit Uhrzeit, nicht ganztägig), dessen `SUMMARY` die übernehmende Partei benennt (Titel beginnend mit „Wechsel“). `DTSTART` liefert Datum und Uhrzeit der Übergabe.
