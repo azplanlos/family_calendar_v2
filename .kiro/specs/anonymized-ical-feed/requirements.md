@@ -8,7 +8,7 @@ Der Dienst stellt eine neue **HTTP-Endpunkt-URL** bereit (Anonymized_Feed_Endpoi
 
 In FamilyWall erfolgt die Zuordnung eines externen Kalenders zu einer Person über das **Teilen des abonnierten Kalenders mit einem Mitglied** – nicht über Teilnehmerfelder (`ATTENDEE`) einzelner Events. Damit der anonymisierte Kalender in FamilyWall sauber einem Mitglied (dem Participant) zugeordnet werden kann, stellt der Endpunkt den Participant als iCal-Kalendernamen (`X-WR-CALNAME`) bereit und setzt für jedes Event einen konsistenten Organizer-/Kalender-Bezug. Der Participant wird in der Serverless-Konfiguration als Umgebungsvariable hinterlegt.
 
-Wichtig für die Abgrenzung: Dieses Feature betrifft **ausschließlich** den nach außen (an FamilyWall) ausgelieferten anonymisierten Feed. Die Anzeige auf dem eigenen e-ink-Device (`CreateKalenderImage` / `ImageRenderer`) verwendet weiterhin die **Original-Informationen** des Outlook-Feeds und wird durch dieses Feature nicht verändert.
+Wichtig für die Abgrenzung: Anonymisiert wird **ausschließlich** der nach außen (an FamilyWall) ausgelieferte Feed. Die Anzeige auf dem eigenen e-ink-Device (`CreateKalenderImage` / `ImageRenderer`) verwendet die **Original-Informationen** (nicht anonymisiert) des Outlook-Feeds. Zusätzlich rendert das Device den Outlook_Source_Feed neben dem bestehenden Familienkalender-Feed (`CALENDAR_FEED`) und weist dessen Events dem Participant zu.
 
 Die Funktion umfasst vier Bausteine:
 
@@ -34,7 +34,7 @@ Hinweis: Inhalte aus den oben verlinkten FamilyWall-Quellen wurden zur Einhaltun
 - **Anonymized_Feed**: Funktionsbaustein, der aus dem Outlook_Source_Feed einen anonymisierten iCal-Feed für FamilyWall erzeugt und über den Anonymized_Feed_Endpoint ausliefert.
 - **Anonymized_Feed_Endpoint**: Neue AWS-Lambda-Funktion mit Function URL, die bei HTTP-Aufruf den anonymisierten iCal-Feed als Antwort liefert.
 - **Outlook_Source_Feed**: Der eingehende iCal-Feed (RFC 5545) aus outlook.com, dessen URL über die Umgebungsvariable `ANON_SOURCE_FEED` konfiguriert wird.
-- **Participant**: Die Person, der der anonymisierte Kalender in FamilyWall zugeordnet wird; als Anzeigename über die Umgebungsvariable `ANON_PARTICIPANT` konfiguriert.
+- **Participant**: Die Person, der der anonymisierte Kalender in FamilyWall zugeordnet wird; als Anzeigename über die Umgebungsvariable `ANON_PARTICIPANT` konfiguriert. Dient zugleich als Personenzuordnung der Outlook-Events auf dem e-ink-Device.
 - **Private_Event**: Ein `VEVENT` des Outlook_Source_Feed, dessen `CLASS`-Eigenschaft den Wert `PRIVATE` oder `CONFIDENTIAL` trägt.
 - **Public_Event**: Ein `VEVENT` des Outlook_Source_Feed, das kein Private_Event ist (CLASS fehlt oder hat den Wert `PUBLIC`).
 - **Anonymisierter_Platzhalter (Anonymized_Placeholder)**: Der neutrale Ersatztext, der bei einem Private_Event als `SUMMARY` gesetzt wird; über die Umgebungsvariable `ANON_PLACEHOLDER` konfigurierbar, mit Vorgabewert „Privat".
@@ -44,7 +44,7 @@ Hinweis: Inhalte aus den oben verlinkten FamilyWall-Quellen wurden zur Einhaltun
 - **Vergangenes_Event (Past_Event)**: Ein nicht wiederkehrendes `VEVENT`, dessen Ende (`DTEND`; ersatzweise `DTSTART` bzw. bei Ganztags-Events `DTSTART` + 1 Tag) vor dem aktuellen Zeitpunkt (Jetzt) liegt. Ein Event mit `RRULE` (Serientermin) gilt nie allein aufgrund eines vergangenen `DTSTART` als Vergangenes_Event.
 - **VTIMEZONE**: iCal-Komponente, die eine Zeitzonendefinition enthält und von Events über den TZID-Parameter referenziert wird.
 - **iCal_Kalendername (X-WR-CALNAME)**: Die iCal-Kalendereigenschaft `X-WR-CALNAME`, die FamilyWall als Name des abonnierten Kalenders anzeigt.
-- **CreateKalenderImage**: Bestehende Lambda-Funktion (EventBridge-getriggert), die das e-ink-Kalenderbild erzeugt und PNG + BIN nach S3 lädt. Sie nutzt die Original-Informationen des Outlook-Feeds.
+- **CreateKalenderImage**: Bestehende Lambda-Funktion (EventBridge-getriggert), die das e-ink-Kalenderbild erzeugt und PNG + BIN nach S3 lädt. Sie lädt zusätzlich den Outlook_Source_Feed unanonymisiert (Original-Informationen) und weist dessen Events dem Participant zu.
 - **ImageRenderer**: Bestehende Klasse, die das e-ink-Bild aus den Original-Events rendert.
 - **IcalParser**: Bestehende Komponente, die iCal-Daten (ical4j) in Events parst.
 - **API_Secret**: Gemeinsames Geheimnis zur optionalen Authentifizierung eines Endpunkts, analog zum bestehenden `ServeCalendarImage`.
@@ -108,7 +108,7 @@ Hinweis: Inhalte aus den oben verlinkten FamilyWall-Quellen wurden zur Einhaltun
 
 #### Acceptance Criteria
 
-1. WHEN CreateKalenderImage das e-ink-Kalenderbild erzeugt, THE CreateKalenderImage SHALL die Original-Informationen (`SUMMARY`, Inhaltsfelder) des Outlook_Source_Feed verwenden und ein Bild erzeugen, das mit und ohne aktiviertes Feature byte-identisch ist.
+1. WHEN CreateKalenderImage das e-ink-Kalenderbild erzeugt, THE CreateKalenderImage SHALL die Original-Informationen (`SUMMARY`, Inhaltsfelder) des Outlook_Source_Feed verwenden und an keiner Stelle den Anonymisierten_Platzhalter einsetzen.
 2. THE Anonymized_Feed SHALL die Anonymisierung ausschließlich auf den über den Anonymized_Feed_Endpoint ausgelieferten iCal-Feed anwenden.
 3. WHEN der Anonymized_Feed_Endpoint aufgerufen wird, THE Anonymized_Feed SHALL die auf S3 abgelegten Artefakte `calendar.png` und `calendar.bin` unverändert (byte-identisch vor und nach dem Abruf) lassen.
 4. IF die Anonymisierung oder der Abruf des Anonymized_Feed fehlschlägt, THEN THE CreateKalenderImage SHALL die e-ink-Device-Anzeige weiterhin aus den Original-Informationen rendern und der Fehler SHALL auf den Anonymized_Feed_Endpoint beschränkt bleiben.
@@ -144,7 +144,8 @@ Hinweis: Inhalte aus den oben verlinkten FamilyWall-Quellen wurden zur Einhaltun
 
 1. THE serverless.yml SHALL innerhalb der bestehenden Serverless-Konfiguration eine neue Lambda-Funktion für den Anonymized_Feed_Endpoint mit einer Function URL definieren.
 2. THE serverless.yml SHALL die Umgebungsvariablen `ANON_SOURCE_FEED`, `ANON_PARTICIPANT`, `ANON_PLACEHOLDER` und `ANON_API_SECRET` an die Anonymized_Feed_Endpoint-Funktion übergeben.
-3. IF beim Start der Anonymized_Feed_Endpoint-Funktion eine der erforderlichen Umgebungsvariablen `ANON_SOURCE_FEED`, `ANON_PARTICIPANT`, `ANON_PLACEHOLDER` oder `ANON_API_SECRET` nicht gesetzt oder leer ist, THEN THE Anonymized_Feed_Endpoint SHALL die Initialisierung abbrechen und eine Fehlermeldung ausgeben, die die fehlende Umgebungsvariable benennt.
+3. THE serverless.yml SHALL die Umgebungsvariablen `ANON_SOURCE_FEED` und `ANON_PARTICIPANT` zusätzlich an die Funktion FamilyWall-Kalender (CreateKalenderImage) übergeben.
+4. IF beim Start der Anonymized_Feed_Endpoint-Funktion eine der erforderlichen Umgebungsvariablen `ANON_SOURCE_FEED`, `ANON_PARTICIPANT`, `ANON_PLACEHOLDER` oder `ANON_API_SECRET` nicht gesetzt oder leer ist, THEN THE Anonymized_Feed_Endpoint SHALL die Initialisierung abbrechen und eine Fehlermeldung ausgeben, die die fehlende Umgebungsvariable benennt.
 
 ### Requirement 9: Filterung vergangener und als frei markierter Events
 
@@ -158,3 +159,18 @@ Hinweis: Inhalte aus den oben verlinkten FamilyWall-Quellen wurden zur Einhaltun
 4. WHERE ein `VEVENT` eine `RRULE` besitzt (Serientermin), THE Anonymized_Feed SHALL es nicht allein aufgrund eines in der Vergangenheit liegenden `DTSTART` als Vergangenes_Event auslassen, sondern anhand des Frei_Status und - sofern bestimmbar - des Endes der Serie entscheiden; im Zweifel SHALL das Serien-Event übernommen werden.
 5. THE Anonymized_Feed SHALL einen `TRANSP`-Wert `TRANSPARENT` oder einen `X-MICROSOFT-CDO-BUSYSTATUS`-Wert `FREE` (jeweils getrimmt, ohne Berücksichtigung der Groß-/Kleinschreibung) als Frei_Status werten; fehlen beide Eigenschaften oder tragen sie andere Werte (z. B. `OPAQUE`, `BUSY`, `TENTATIVE`, `OOF`), SHALL das Event als belegt gelten und - vorbehaltlich der übrigen Regeln - übernommen werden.
 6. WHEN ein Event wegen Vergangenheit oder Frei_Status ausgelassen wird, THE Anonymized_Feed SHALL den erzeugten Feed dennoch gültig nach RFC 5545 halten und die übrigen Events unverändert ausliefern.
+
+### Requirement 10: Zusätzliche Anzeige des Outlook-Feeds auf dem e-ink-Device
+
+**User Story:** Als Participant möchte ich, dass mein Outlook-Kalender zusätzlich zum Familienkalender unzensiert auf dem e-ink-Device erscheint und mir zugeordnet ist, damit ich alle meine Termine im Original auf einen Blick sehe.
+
+#### Acceptance Criteria
+
+1. WHERE der getrimmte Wert von `ANON_SOURCE_FEED` eine gültige URL mit Schema `http` oder `https` und einem nicht leeren Host enthält, THE CreateKalenderImage SHALL den Outlook_Source_Feed zusätzlich zu `CALENDAR_FEED` (sowie Schul-, Ferien- und Feiertagsquellen) über denselben Datumsbereich wie `CALENDAR_FEED` (aktueller Monat und Folgemonat) laden, mit dem IcalParser als `EventSource.CALENDAR` parsen und dessen Events in der Tagesansicht und im Monatskalender rendern.
+2. WHEN CreateKalenderImage Events des Outlook_Source_Feed rendert, THE CreateKalenderImage SHALL den originalen `SUMMARY` ohne Anonymisierung verwenden, einschließlich der Private_Events.
+3. WHERE der getrimmte Wert von `ANON_PARTICIPANT` nicht leer ist, THE CreateKalenderImage SHALL die Teilnehmerliste jedes Events des Outlook_Source_Feed auf genau einen Eintrag setzen, nämlich den getrimmten Wert von `ANON_PARTICIPANT`, und dabei geparste `ATTENDEE`-Werte ersetzen, sodass der Participant in der Teilnehmerliste des Devices erscheint.
+4. IF `ANON_PARTICIPANT` fehlt oder der getrimmte Wert leer ist, THEN THE CreateKalenderImage SHALL die geparsten Teilnehmer der Events des Outlook_Source_Feed unverändert übernehmen.
+5. THE CreateKalenderImage SHALL die Events des Outlook_Source_Feed nach dem Zuweisungsschritt für Events ohne Teilnehmer an die Ergebnisliste anhängen, sodass Events des Hauptfeeds `CALENDAR_FEED` ohne Teilnehmer nicht aufgrund des Outlook_Source_Feed dem Participant zugewiesen werden.
+6. IF `ANON_SOURCE_FEED` fehlt, nach dem Trimmen leer ist oder keine URL mit Schema `http` oder `https` und nicht leerem Host enthält, THEN THE CreateKalenderImage SHALL keinen Abruf des Outlook_Source_Feed durchführen, keinen Eintrag in die Fehlerliste aufnehmen und das Bild identisch zu einem Lauf ohne Outlook_Source_Feed rendern.
+7. IF das Laden oder Parsen des Outlook_Source_Feed fehlschlägt, THEN THE CreateKalenderImage SHALL genau einen Eintrag der Form „Outlook-Feed: <Fehlermeldung>" in die Fehlerliste aufnehmen, keine Events des Outlook_Source_Feed rendern und die übrigen Feeds unverändert rendern.
+8. THE CreateKalenderImage SHALL für die Device-Anzeige keine Komponenten des Anonymized_Feed (insbesondere nicht den FeedAnonymizer) verwenden.

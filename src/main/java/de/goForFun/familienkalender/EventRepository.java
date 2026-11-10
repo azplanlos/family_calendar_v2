@@ -55,6 +55,21 @@ public class EventRepository {
      * @param holidayProvider     optionaler HolidayProvider (kann null sein)
      */
     public EventRepository(URI feedUri, URI schoolFeedUri, URI vacationFeedUri, LocalDate referenceDate, HolidayProvider holidayProvider) throws IOException, ParserException {
+        this(feedUri, schoolFeedUri, vacationFeedUri, null, null, referenceDate, holidayProvider);
+    }
+
+    /**
+     * Wie der Konstruktor oben, zusätzlich mit einem optionalen Participant-Feed (z. B. der
+     * Original-Outlook-Feed). Dessen Events werden UNANONYMISIERT zusätzlich zum Hauptfeed
+     * gerendert und dem {@code participantName} zugewiesen. Ist {@code participantName} leer,
+     * bleiben die geparsten Teilnehmer unverändert.
+     *
+     * @param participantFeedUri URI des zusätzlichen Feeds (kann null sein => inaktiv)
+     * @param participantName    Name, dem die Events des zusätzlichen Feeds zugewiesen werden
+     */
+    public EventRepository(URI feedUri, URI schoolFeedUri, URI vacationFeedUri,
+                           URI participantFeedUri, String participantName,
+                           LocalDate referenceDate, HolidayProvider holidayProvider) throws IOException, ParserException {
         IcalParser icalParser = new IcalParser();
         List<Event> events = new ArrayList<>();
         List<String> errors = new ArrayList<>();
@@ -98,7 +113,24 @@ public class EventRepository {
             }
         }
 
-        this.allEvents = Collections.unmodifiableList(assignParticipantsToUnassigned(events));
+        List<Event> assigned = new ArrayList<>(assignParticipantsToUnassigned(events));
+
+        // Zusätzlicher Feed (Original-Outlook): NACH der Zuweisung anhängen, damit Events ohne
+        // Teilnehmer aus dem Hauptfeed nicht auch dem Participant zugeordnet werden.
+        if (participantFeedUri != null) {
+            String name = participantName == null ? "" : participantName.trim();
+            try {
+                for (Event e : icalParser.parse(participantFeedUri, rangeStart, rangeEnd, EventSource.CALENDAR)) {
+                    assigned.add(name.isEmpty() ? e : new Event(
+                            List.of(name), e.startTime(), e.endTime(), e.summary(),
+                            e.color(), e.source(), e.url(), e.uid()));
+                }
+            } catch (IOException | ParserException e) {
+                errors.add("Outlook-Feed: " + e.getMessage());
+            }
+        }
+
+        this.allEvents = Collections.unmodifiableList(assigned);
         this.errors = Collections.unmodifiableList(errors);
     }
 

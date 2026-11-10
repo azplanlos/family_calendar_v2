@@ -378,6 +378,8 @@ Two filters keep the feed lean (see spec Requirement 9):
 
 Configuration via `ANON_SOURCE_FEED` (required), `ANON_PARTICIPANT` (sets `X-WR-CALNAME`), `ANON_PLACEHOLDER` (default `Privat`) and `ANON_API_SECRET` (optional `?token=` guard; empty = open access). See `.env.example` and `serverless.yml`.
 
+The device renderer (`CreateKalenderImage`) also reads `ANON_SOURCE_FEED` and `ANON_PARTICIPANT`: the original Outlook events are rendered **un-anonymized** as an additional feed alongside `CALENDAR_FEED` and assigned to `ANON_PARTICIPANT`. Only the FamilyWall feed is anonymized.
+
 ## Technology Stack
 
 | Component | Technology |

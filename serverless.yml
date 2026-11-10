@@ -46,6 +46,8 @@ functions:
       OPENWEATHER_API_KEY: ${param:openweatherApiKey}
       OPENWEATHER_LAT: ${param:openweatherLat}
       OPENWEATHER_LON: ${param:openweatherLon}
+      ANON_SOURCE_FEED: ${param:anonSourceFeed, ''}
+      ANON_PARTICIPANT: ${param:anonParticipant, ''}
 
   ServeCalendarImage:
     handler: de.goForFun.familienkalender.ServeCalendarImage

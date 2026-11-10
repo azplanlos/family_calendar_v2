@@ -34,11 +34,20 @@ mehr äquivalent zur Quelle (verletzt Requirement 1.1, 1.7, 2.3, 6.2, 6.5).
 
 ### Strikte Trennung vom Device-Pfad (Requirement 5)
 
-Das Feature ist additiv. `CreateKalenderImage`, `ImageRenderer`, `IcalParser`, das
-`Event`-Record und alle S3-Artefakte (`calendar.png`, `calendar.bin`) bleiben **unverändert**.
-Der Anonymizer liest denselben Quellfeed über eine *eigene* HTTP-Verbindung erneut und greift
-nie auf S3 zu. Ein Fehler im Anonymized-Feed kann den Device-Pfad nicht beeinflussen, weil
-beide Pfade keine gemeinsamen veränderlichen Ressourcen teilen.
+Die **Anonymisierung** bleibt strikt getrennt: Das Device nutzt keine Komponente des
+`anonfeed`-Pakets (insbesondere nicht den `FeedAnonymizer`), und der Anonymizer greift nie
+auf S3 zu. Der Anonymizer liest den Quellfeed über eine *eigene* HTTP-Verbindung. Ein Fehler
+im Anonymized-Feed kann den Device-Pfad nicht beeinflussen, weil beide Pfade keine
+gemeinsamen veränderlichen Ressourcen teilen.
+
+Der Device-Pfad wird dagegen **klein und additiv erweitert** (`EventRepository` und
+`CreateKalenderImage`): Er rendert den Outlook-Feed zusätzlich zum Familienkalender
+**unanonymisiert** und weist dessen Events dem Participant (`ANON_PARTICIPANT`) zu.
+`ImageRenderer`, `IcalParser` und das `Event`-Record bleiben unverändert. Aus derselben
+Quelle entstehen damit zwei Sichten: **Device = Original + Participant-Zuordnung**,
+**FamilyWall = anonymisiert**. Die S3-Artefakte (`calendar.png`, `calendar.bin`) werden
+weiterhin ausschließlich von `CreateKalenderImage` geschrieben; der Feed-Endpoint verändert
+sie nicht.
 
 ## Architecture
 
@@ -60,12 +69,12 @@ flowchart LR
     FETCH -->|GET ANON_SOURCE_FEED| OUTLOOK[(outlook.com<br/>Outlook_Source_Feed)]
     OUT -->|200 text/calendar; charset=utf-8| FW
 
-    subgraph Device [Unveränderter Device-Pfad - Requirement 5]
+    subgraph Device [Device-Pfad - Requirement 5 und 10, ohne anonfeed-Komponenten]
         EB[EventBridge Schedule] --> CKI[CreateKalenderImage] --> S3[(S3<br/>calendar.png / calendar.bin)]
         S3 --> SCI[ServeCalendarImage] --> ESP[ESP32 e-ink]
     end
 
-    OUTLOOK -.gelesen von beiden Pfaden, getrennte Verbindungen.-> CKI
+    OUTLOOK -->|original, Participant-Zuordnung| CKI
 ```
 
 ### Ablauf eines Requests
@@ -187,6 +196,45 @@ Regeln (abgeleitet aus Requirements 1.3/1.4, 2.6, 4.1/4.2/4.5, 7):
 - `apiSecret`: `ANON_API_SECRET` getrimmt; nur gesetzt bei Länge ≥ 1, sonst leer (→ offener
   Zugriff).
 
+### 5. Device-Erweiterung: Outlook-Feed im e-ink-Render
+
+Diese Erweiterung liegt im **bestehenden Device-Paket** `de.goForFun.familienkalender`
+(`CreateKalenderImage`, `EventRepository`), **nicht** im Paket `anonfeed`.
+
+`CreateKalenderImage`:
+
+- liest `System.getenv("ANON_SOURCE_FEED")` über die bestehende Methode `parseHttpUri`
+  (`null` ⇒ Feature inaktiv, kein Abruf, kein Fehlereintrag) und
+  `System.getenv("ANON_PARTICIPANT")`,
+- ruft den neuen `EventRepository`-Konstruktor auf:
+
+```java
+public EventRepository(URI feedUri, URI schoolFeedUri, URI vacationFeedUri,
+                       URI participantFeedUri, String participantName,
+                       LocalDate referenceDate, HolidayProvider holidayProvider)
+        throws IOException, ParserException
+```
+
+Der bisherige 5-Argument-Konstruktor delegiert mit `participantFeedUri = null` und
+`participantName = null`.
+
+Verhalten in `EventRepository`:
+
+- Der Participant-Feed wird mit `IcalParser` über denselben Bereich wie die übrigen Feeds
+  (aktueller Monat + Folgemonat) als `EventSource.CALENDAR` geladen – **unanonymisiert**
+  (Original-`SUMMARY`, auch bei Private_Events).
+- Das Anhängen erfolgt **nach** `assignParticipantsToUnassigned(...)` für die übrigen Feeds,
+  damit Hauptfeed-Events ohne Teilnehmer nicht dem Participant zugewiesen werden.
+- Ist `trim(participantName)` nicht leer, wird jedes Event kopiert mit
+  `participants = List.of(trim(name))` (ersetzt geparste `ATTENDEE`-Werte); sonst bleiben
+  die Events unverändert. Der Participant erscheint dadurch in `getAllParticipants()`.
+- Schlägt Laden/Parsen fehl, wird `"Outlook-Feed: " + Fehlermeldung` in die Fehlerliste
+  aufgenommen; die übrigen Feeds werden unverändert gerendert.
+
+Bekannte, bereits bestehende Einschränkung: `IcalParser` expandiert nur Events, deren Zeiten
+eine `TZID` (`ZonedDateTime`) tragen oder die ganztägige Datumswerte sind; floating bzw.
+reine UTC-Zeiten werden übersprungen. Outlook liefert `TZID`, daher unkritisch.
+
 ### 4. Deployment (`serverless.yml`)
 
 Neue Funktion neben den bestehenden, mit Function URL und den vier `ANON_*`-Variablen:
@@ -208,6 +256,16 @@ Neue Funktion neben den bestehenden, mit Function URL und den vier `ANON_*`-Vari
 `provider.runtime` bleibt `java25`, Region `eu-central-1`. Das Lambda-`timeout` wird auf 30 s
 angehoben (Remote-Fetch), während die 10 s aus Requirement 1 AC5 als **HTTP-Read-Timeout** im
 Client gesetzt werden – die Lambda-Grenze ist nur ein Sicherheitsnetz.
+
+Zusätzlich erhält die bestehende Funktion `FamilyWall-Kalender` (CreateKalenderImage) die
+Variablen für die Device-Erweiterung (Requirement 8.3); leer bedeutet inaktiv:
+
+```yaml
+  FamilyWall-Kalender:
+    environment:
+      ANON_SOURCE_FEED: ${param:anonSourceFeed, ''}
+      ANON_PARTICIPANT: ${param:anonParticipant, ''}
+```
 
 ## Data Models
 
@@ -396,6 +454,8 @@ Meldung (kein iCal) und werden über `context.getLogger()` protokolliert.
 | Quelle nicht in 10 s erreichbar **oder** nicht als iCal parsebar           | 502    | Meldung benennt nicht verarbeitbaren Outlook_Source_Feed                   | 1.5         |
 | Einzelnes `VEVENT` ohne einlesbare `UID`/`DTSTART`                          | 200    | Event wird **ausgelassen**, Log benennt das Event; restlicher Feed normal  | 6.4         |
 | Participant leer nach Trim bzw. > 200 Zeichen                              | 200    | kein `X-WR-CALNAME`, Log benennt Grund                                      | 4.5         |
+| Device: Outlook-Feed lässt sich nicht laden/parsen (`CreateKalenderImage`)  | –      | Fehlerliste-Eintrag `"Outlook-Feed: <Meldung>"`, keine Outlook-Events; übrige Feeds und Bild werden normal gerendert | 5.4, 10.7 |
+| Device: `ANON_SOURCE_FEED` fehlt/ungültig                                   | –      | kein Abruf, kein Fehlereintrag, Bild wie ohne Outlook-Feed                   | 10.6        |
 
 Weitere Entscheidungen:
 
@@ -406,11 +466,11 @@ Weitere Entscheidungen:
   Ausnahmen und mappt sie auf 5xx; er wirft nicht weiter und berührt keine S3-Objekte. Da
   Device- und Feed-Pfad keine gemeinsamen veränderlichen Ressourcen teilen, bleibt ein Fehler
   lokal am Endpoint.
-- **Spannung R7.3 ↔ R8.3 (Startup-Validierung).** Requirement 8.3 verlangt Init-Abbruch bei
+- **Spannung R7.3 ↔ R8.4 (Startup-Validierung).** Requirement 8.4 verlangt Init-Abbruch bei
   fehlender/leerer Pflicht-ENV, inkl. `ANON_API_SECRET`; Requirement 7.3 definiert leeres
   `ANON_API_SECRET` jedoch als „offener Zugriff". Designentscheidung: Die Startup-Prüfung nach
-  8.3 behandelt `ANON_API_SECRET` und `ANON_PARTICIPANT` als „gesetzt, darf aber leer sein"
-  (leer = gültiger Zustand gemäß 7.3/4.4), sodass 8.3 nicht mit 7.3/4.4 kollidiert; harte
+  8.4 behandelt `ANON_API_SECRET` und `ANON_PARTICIPANT` als „gesetzt, darf aber leer sein"
+  (leer = gültiger Zustand gemäß 7.3/4.4), sodass 8.4 nicht mit 7.3/4.4 kollidiert; harte
   Pflicht ist die *Existenz* der Schlüssel im Environment, während `ANON_SOURCE_FEED` zusätzlich
   zur Laufzeit inhaltlich validiert wird (1.4 → 500). Diese Auslegung ist im Review zu
   bestätigen.
@@ -471,12 +531,21 @@ und ein `CLASS:PRIVATE`-Event, `VTIMEZONE` „Romance Standard Time", `X-WR-CALN
   (4.1, 4.4, 4.5).
 - **Ausgelassene Events:** Feed mit `VEVENT` ohne `UID`/`DTSTART` → fehlt im Output + Log (6.4).
 - **Startup-Validierung:** je eine fehlende Pflicht-ENV → definierter Init-Fehler, der die
-  Variable benennt (8.3), unter Beachtung der oben beschriebenen R7.3/R8.3-Auslegung.
+  Variable benennt (8.4), unter Beachtung der oben beschriebenen R7.3/R8.3-Auslegung.
 
 ### Separations-/Nicht-Regressionstests (Requirement 5)
 
-- Bestehende `ImageRenderer`/`CreateKalenderImage`-Tests bleiben unverändert grün (Device-Pfad
-  unberührt, 5.1).
+- Bestehende Device-Tests (`ImageRenderer`, `EventRepository`, `CreateKalenderImage`) bleiben
+  grün (5.1).
+- Neue Beispiel-Tests `EventRepositoryParticipantFeedTest` (JUnit) für die Device-Erweiterung
+  (Requirement 10):
+  - Originaltitel wird gerendert, inkl. „Privater Termin" (10.2, 5.1)
+  - Events des Outlook-Feeds sind dem Participant zugewiesen (10.1, 10.3)
+  - Participant erscheint in `getAllParticipants()` (10.3)
+  - Hauptfeed-Events ohne Teilnehmer werden nicht dem Participant zugewiesen (10.5)
+  - ohne Feed inaktiv, ohne Fehlereintrag (10.6)
+  - leerer/blanker Participant lässt Teilnehmer unverändert (10.4)
+  - Ladefehler wird als `"Outlook-Feed: ..."` gesammelt, übrige Feeds unberührt (10.7)
 - Nachweis, dass `FeedAnonymizer`/`ServeAnonymizedFeed` keinen `S3Client` nutzen und keine
   Device-Artefakte schreiben (5.2, 5.3) – über Code-/Abhängigkeitsgrenze und einen Test, der
   prüft, dass kein S3-Write erfolgt.
@@ -514,9 +583,9 @@ Smoke-/Inspektionstest: `serverless.yml` enthält die Funktion `ServeAnonymizedF
 | 4.3 RFC-5545 Escaping/Faltung             | Data Models (Escaping via Outputter), Property 8                               |
 | 4.4 Participant fehlt → kein X-WR-CALNAME | X-WR-CALNAME-Tabelle, Testing (Edge-Case)                                       |
 | 4.5 leer/>200 → kein X-WR-CALNAME + Log   | X-WR-CALNAME-Tabelle, Error Handling, Testing                                  |
-| 5.1 Device nutzt Originalinfos            | Overview (Trennung), Testing (Nicht-Regression)                                |
+| 5.1 Device nutzt Originalinfos, kein Platzhalter | Overview (Trennung), Komponente 5, Testing (Nicht-Regression, EventRepositoryParticipantFeedTest) |
 | 5.2 Anonymisierung nur am Endpoint        | Overview (Trennung), Testing (Separations-Test)                                |
-| 5.3 S3-Artefakte byte-identisch           | Overview (keine S3-Nutzung), Testing (kein S3-Write)                            |
+| 5.3 S3-Artefakte durch Endpoint unverändert | Overview (keine S3-Nutzung), Testing (kein S3-Write)                          |
 | 5.4 Fehler bleibt lokal                   | Error Handling (Isolation)                                                       |
 | 6.1 Feed wieder einlesbar                 | Property 1                                                                        |
 | 6.2 UID/DTSTART/DTEND-Korrespondenz       | Property 2                                                                        |
@@ -529,4 +598,13 @@ Smoke-/Inspektionstest: `serverless.yml` enthält die Funktion `ServeAnonymizedF
 | 7.4 Token mehrfach → 401                  | Auth-Design, Error Handling (401), Testing                                      |
 | 8.1 neue Function + Function URL          | Deployment (serverless.yml), Testing (Smoke)                                    |
 | 8.2 vier ANON_* Variablen                 | Deployment (serverless.yml), Testing (Smoke)                                    |
-| 8.3 Startup-Validierung Pflicht-ENV       | Error Handling (R7.3/R8.3-Auslegung), AnonConfig, Testing                       |
+| 8.3 ANON_SOURCE_FEED/ANON_PARTICIPANT an FamilyWall-Kalender | Deployment (zweites serverless.yml-Snippet), Komponente 5 |
+| 8.4 Startup-Validierung Pflicht-ENV       | Error Handling (R7.3/R8.4-Auslegung), AnonConfig, Testing                       |
+| 10.1 Outlook-Feed zusätzlich laden/rendern (gleicher Bereich, `EventSource.CALENDAR`) | Komponente 5, Testing (EventRepositoryParticipantFeedTest) |
+| 10.2 Originaler SUMMARY, auch Private     | Komponente 5, Testing (Test „Privater Termin")                                  |
+| 10.3 Participant als einziger Teilnehmer  | Komponente 5, Testing (Zuordnung, getAllParticipants)                           |
+| 10.4 Participant leer → Teilnehmer unverändert | Komponente 5, Testing (blanker Participant)                                |
+| 10.5 Anhängen nach Zuweisungsschritt      | Komponente 5, Testing (Hauptfeed-Events ohne Teilnehmer nicht zugewiesen)       |
+| 10.6 Feed fehlt/ungültig → inaktiv, kein Fehler | Komponente 5 (`parseHttpUri`), Error Handling, Testing                   |
+| 10.7 Ladefehler → „Outlook-Feed: …"       | Komponente 5, Error Handling, Testing (Fehlersammlung)                          |
+| 10.8 Keine anonfeed-Komponenten im Device | Overview (Trennung), Komponente 5                                               |

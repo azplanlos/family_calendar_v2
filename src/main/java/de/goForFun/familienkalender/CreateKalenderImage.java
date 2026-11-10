@@ -67,7 +67,11 @@ public class CreateKalenderImage implements RequestHandler<ScheduledEvent, Void>
                     ? URI.create(SCHOOL_CALENDAR_FEED) : null;
             URI vacationFeedUri = VACATION_CALENDAR_FEED != null && !VACATION_CALENDAR_FEED.isBlank()
                     ? URI.create(VACATION_CALENDAR_FEED) : null;
-            EventRepository eventRepository = new EventRepository(URI.create(CALENDAR_FEED), schoolFeedUri, vacationFeedUri, today, holidayProvider);
+            // Original-Outlook-Feed (unanonymisiert) zusätzlich rendern und dem Participant zuordnen
+            URI outlookFeedUri = parseHttpUri(System.getenv("ANON_SOURCE_FEED"));
+            String outlookParticipant = System.getenv("ANON_PARTICIPANT");
+            EventRepository eventRepository = new EventRepository(URI.create(CALENDAR_FEED), schoolFeedUri, vacationFeedUri,
+                    outlookFeedUri, outlookParticipant, today, holidayProvider);
             List<Event> todayEvents = eventRepository.getEventsForDay(today);
             List<Event> tomorrowEvents = eventRepository.getEventsForDay(today.plusDays(1));
 
