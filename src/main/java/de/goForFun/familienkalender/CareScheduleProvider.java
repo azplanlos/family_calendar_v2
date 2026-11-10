@@ -20,7 +20,7 @@ import java.util.Map;
  * <b>UID-Präfix</b> eindeutig unterschieden werden:
  * <ul>
  *   <li>{@code wp-care-…} und {@code wp-vacation-…}: ganztägige <b>Betreuungsblöcke</b>
- *       ("Lukas bei …" bzw. "Lukas: Urlaub – …"). Jeder Kalendertag im halboffenen Bereich
+ *       ("Kind bei …" bzw. "Kind: Urlaub – …"). Jeder Kalendertag im halboffenen Bereich
  *       {@code [DTSTART, DTEND)} gehört zur im {@code SUMMARY} genannten Partei.</li>
  *   <li>{@code wp-handover-…}: getimte <b>Wechsel-Events</b> ("Wechsel zu …") – markieren den
  *       Übergabe-Zeitpunkt; die genannte Partei ist die übernehmende (Zweite_Tageshälfte).</li>

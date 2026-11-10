@@ -45,36 +45,36 @@ class EventRepositoryParticipantFeedTest {
     @Test
     void outlookEventsWerdenUnanonymisiertDemParticipantZugeordnet(@TempDir Path dir) throws Exception {
         EventRepository repo = new EventRepository(mainFeed(dir), null, null,
-                OUTLOOK_FIXTURE, "  Andreas  ", DAY, null);
+                OUTLOOK_FIXTURE, "  Max  ", DAY, null);
 
         List<Event> privat = findBySummary(repo, "Privater Termin");
         assertThat(privat).hasSize(1);
-        assertThat(privat.get(0).participants()).containsExactly("Andreas");
+        assertThat(privat.get(0).participants()).containsExactly("Max");
         assertThat(findBySummary(repo, "Test normal")).singleElement()
-                .satisfies(e -> assertThat(e.participants()).containsExactly("Andreas"));
+                .satisfies(e -> assertThat(e.participants()).containsExactly("Max"));
         assertThat(repo.getEventsForDay(DAY)).noneMatch(e -> "Privat".equals(e.summary()));
 
-        assertThat(repo.getAllParticipants()).contains("Andreas");
+        assertThat(repo.getAllParticipants()).contains("Max");
         assertThat(repo.getErrors()).isEmpty();
     }
 
     @Test
     void unzugeordneteHauptfeedEventsBekommenNichtDenParticipant(@TempDir Path dir) throws Exception {
         EventRepository repo = new EventRepository(mainFeed(dir), null, null,
-                OUTLOOK_FIXTURE, "Andreas", DAY, null);
+                OUTLOOK_FIXTURE, "Max", DAY, null);
 
         assertThat(findBySummary(repo, "Familienfrühstück")).singleElement()
-                .satisfies(e -> assertThat(e.participants()).doesNotContain("Andreas"));
+                .satisfies(e -> assertThat(e.participants()).doesNotContain("Max"));
     }
 
     @Test
     void ohneParticipantFeedBleibtAllesUnveraendert(@TempDir Path dir) throws Exception {
         URI main = mainFeed(dir);
-        EventRepository withNull = new EventRepository(main, null, null, null, "Andreas", DAY, null);
+        EventRepository withNull = new EventRepository(main, null, null, null, "Max", DAY, null);
         EventRepository legacy = new EventRepository(main, null, null, DAY, null);
 
         assertThat(withNull.getEventsForDay(DAY)).isEqualTo(legacy.getEventsForDay(DAY));
-        assertThat(withNull.getAllParticipants()).doesNotContain("Andreas");
+        assertThat(withNull.getAllParticipants()).doesNotContain("Max");
     }
 
     @Test
@@ -90,7 +90,7 @@ class EventRepositoryParticipantFeedTest {
     void fehlerImParticipantFeedWirdGesammelt(@TempDir Path dir) throws Exception {
         URI missing = dir.resolve("gibt-es-nicht.ics").toUri();
         EventRepository repo = new EventRepository(mainFeed(dir), null, null,
-                missing, "Andreas", DAY, null);
+                missing, "Max", DAY, null);
 
         assertThat(repo.getErrors()).anyMatch(m -> m.startsWith("Outlook-Feed:"));
         assertThat(findBySummary(repo, "Familienfrühstück")).hasSize(1);

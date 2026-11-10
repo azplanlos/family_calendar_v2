@@ -36,17 +36,17 @@ public class TestImageCreation {
                 // Ganztägig mit rotem iCal-Color – roter Balken, schwarze Schrift
                 new Event(List.of("Anna Schmidt"), now.withHour(0).withMinute(0), now.plusDays(1).withHour(0).withMinute(0), "Urlaub Anna", "red", EventSource.CALENDAR, null),
                 // Ganztägig ohne Farbe – schwarzer Rahmen
-                new Event(List.of("Andreas Neu"), now.withHour(0).withMinute(0), now.plusDays(1).withHour(0).withMinute(0), "Homeoffice", null, EventSource.CALENDAR, null),
+                new Event(List.of("Max Neu"), now.withHour(0).withMinute(0), now.plusDays(1).withHour(0).withMinute(0), "Homeoffice", null, EventSource.CALENDAR, null),
                 // Schulkalender: Timed Event – dunkelgrau gedithert
                 new Event(List.of(), now.withHour(8).withMinute(0), now.withHour(11).withMinute(30), "Bundesjugendspiele", null, EventSource.SCHOOL, null),
                 // Timed Event mit Rot (Hex) – roter Hintergrund im Frame, mit URL
                 new Event(List.of("Anna Schmidt"), now.withHour(14).withMinute(0), now.withHour(15).withMinute(0), "Arzt (wichtig!)", "#CC0000", EventSource.CALENDAR, "https://maps.google.com/?q=Arztpraxis+München"),
                 // Timed Event ohne Farbe – normaler schwarzer Rahmen, mit URL
-                new Event(List.of("Andreas Neu"), now.withHour(20).withMinute(0), now.withHour(22).withMinute(0), "Montagsturnier", null, EventSource.CALENDAR, "https://turnierplan.de/montag"),
+                new Event(List.of("Max Neu"), now.withHour(20).withMinute(0), now.withHour(22).withMinute(0), "Montagsturnier", null, EventSource.CALENDAR, "https://turnierplan.de/montag"),
                 // Timed Event mit blauer Farbe – mit URL (Location-Fallback simuliert)
-                new Event(List.of("Anna Schmidt", "Andreas Neu"), now.withHour(16).withMinute(30), now.withHour(17).withMinute(30), "Elternabend", "#0000FF", EventSource.CALENDAR, "https://www.google.com/maps/search/?api=1&query=Grundschule+M%C3%BCnchen"),
+                new Event(List.of("Anna Schmidt", "Max Neu"), now.withHour(16).withMinute(30), now.withHour(17).withMinute(30), "Elternabend", "#0000FF", EventSource.CALENDAR, "https://www.google.com/maps/search/?api=1&query=Grundschule+M%C3%BCnchen"),
                 // Timed Event mit Rot (Name) – roter Hintergrund im Frame
-                new Event(List.of("Anna Schmidt", "Andreas Neu", "Lena Müller"), now.withHour(18).withMinute(0), now.withHour(19).withMinute(0), "Familienessen", "red", EventSource.CALENDAR, null)
+                new Event(List.of("Anna Schmidt", "Max Neu", "Lena Müller"), now.withHour(18).withMinute(0), now.withHour(19).withMinute(0), "Familienessen", "red", EventSource.CALENDAR, null)
         );
         // Morgen: nur Ferien (spanning) und Feiertag – Smiley wird unter den Events gerendert
         List<Event> tomorrowEvents = List.of(
@@ -115,7 +115,7 @@ public class TestImageCreation {
         // Ein Event das gestern um 22:00 startete und heute um 10:00 endet
         // Wird mit 00:00 Startzeit angezeigt
         List<Event> todayEvents = List.of(
-                new Event(List.of("Andreas Neu"), now.withHour(0).withMinute(0), now.withHour(10).withMinute(0), "LAN-Party", null, EventSource.CALENDAR, null),
+                new Event(List.of("Max Neu"), now.withHour(0).withMinute(0), now.withHour(10).withMinute(0), "LAN-Party", null, EventSource.CALENDAR, null),
                 new Event(List.of("Anna Schmidt"), now.withHour(9).withMinute(0), now.withHour(10).withMinute(30), "Meeting", null, EventSource.CALENDAR, null)
         );
         List<Event> tomorrowEvents = List.of();
