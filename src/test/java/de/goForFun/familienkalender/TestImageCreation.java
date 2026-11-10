@@ -26,7 +26,9 @@ public class TestImageCreation {
 
     @Test
     public void testImageCreation() throws IOException {
-        LocalDateTime now = LocalDateTime.now();
+        // Fester Zeitpunkt 15:30: Bundesjugendspiele (bis 11:30) und Arzt (bis 15:00) sind vergangen
+        // und werden ausgegraut, Elternabend/Familienessen/Montagsturnier liegen in der Zukunft.
+        LocalDateTime now = LocalDate.now().atTime(15, 30);
 
         List<Event> todayEvents = List.of(
                 // Ferien (VACATION) – roter Hintergrund, weiße Schrift, höchste Prio
@@ -81,6 +83,36 @@ public class TestImageCreation {
         ImageRenderer imageRenderer = new ImageRenderer();
         OutputStream outputStream = new FileOutputStream("test.png");
         imageRenderer.renderImage(outputStream, renderData);
+    }
+
+    @Test
+    public void testPastEventIsGreyedOut() {
+        LocalDate day = LocalDate.now();
+        List<Event> events = List.of(
+                new Event(List.of("Max Neu"), day.atTime(8, 0), day.atTime(9, 0), "Termin", null, EventSource.CALENDAR, null));
+        List<WeatherDay> weather = List.of(new WeatherDay("01d", 1, 2), new WeatherDay("01d", 1, 2), new WeatherDay("01d", 1, 2));
+
+        // Vor dem Termin: normal; nach dem Termin: ausgegraut (weniger schwarze Pixel in der Termin-Zeile)
+        java.awt.image.BufferedImage upcoming = new ImageRenderer().createImage(
+                buildRenderData(day.atTime(7, 0), events, List.of(), weather));
+        java.awt.image.BufferedImage past = new ImageRenderer().createImage(
+                buildRenderData(day.atTime(12, 0), events, List.of(), weather));
+
+        int blackUpcoming = countBlack(upcoming);
+        int blackPast = countBlack(past);
+        org.junit.jupiter.api.Assertions.assertTrue(blackPast < blackUpcoming,
+                "Vergangener Termin muss weniger schwarze Pixel haben: " + blackPast + " vs " + blackUpcoming);
+    }
+
+    /** Zählt schwarze Pixel (Palette-Index 1) im Tagesbereich links. */
+    private static int countBlack(java.awt.image.BufferedImage img) {
+        int count = 0;
+        for (int y = 40; y < img.getHeight(); y++) {
+            for (int x = 0; x < 400; x++) {
+                if (img.getRaster().getSample(x, y, 0) == 1) count++;
+            }
+        }
+        return count;
     }
 
     @Test

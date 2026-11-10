@@ -111,7 +111,7 @@ public class ImageRenderer {
         LocalDate today = data.now().toLocalDate();
 
         drawHeader(data.now(), graphics);
-        drawDayColumns(today, data.todayEvents(), data.tomorrowEvents(), data.custodySchedule(), graphics);
+        drawDayColumns(data.now(), today, data.todayEvents(), data.tomorrowEvents(), data.custodySchedule(), graphics);
         drawWeatherForecast(today, data.weatherDays(), graphics);
         drawMonthCalendar(today, data.calendarEvents(), data.participants(), data.custodySchedule(), graphics);
         drawErrors(data.errors(), graphics);
@@ -134,7 +134,7 @@ public class ImageRenderer {
 
     // ========== DAY COLUMNS (Heute / Morgen) ==========
 
-    private void drawDayColumns(LocalDate today, List<Event> todayEvents, List<Event> tomorrowEvents,
+    private void drawDayColumns(LocalDateTime now, LocalDate today, List<Event> todayEvents, List<Event> tomorrowEvents,
                                 Map<LocalDate, CareDay> custodySchedule, Graphics2D graphics) {
         // Finde ganztägige Events, die sowohl heute als auch morgen aktiv sind (durchgängig rendern)
         LocalDate tomorrow = today.plusDays(1);
@@ -163,8 +163,8 @@ public class ImageRenderer {
                 .toList();
 
         // QR-Codes für Events mit URL am unteren Rand der Tagesansicht
-        int todayEndY = drawDayColumn(graphics, today, todayNonSpanning, TODAY_COL_X, TODAY_COL_WIDTH, "Heute", eventY, custodySchedule);
-        int tomorrowEndY = drawDayColumn(graphics, tomorrow, tomorrowNonSpanning, TOMORROW_COL_X, TOMORROW_COL_WIDTH, "Morgen", eventY, custodySchedule);
+        int todayEndY = drawDayColumn(graphics, now, today, todayNonSpanning, TODAY_COL_X, TODAY_COL_WIDTH, "Heute", eventY, custodySchedule);
+        int tomorrowEndY = drawDayColumn(graphics, now, tomorrow, tomorrowNonSpanning, TOMORROW_COL_X, TOMORROW_COL_WIDTH, "Morgen", eventY, custodySchedule);
         int maxEndY = Math.max(todayEndY, tomorrowEndY);
         drawQrCodes(todayEvents, tomorrowEvents, maxEndY, graphics);
     }
@@ -204,7 +204,7 @@ public class ImageRenderer {
         };
     }
 
-    private int drawDayColumn(Graphics2D graphics, LocalDate day, List<Event> events, int x, int width, String label, int spanningEndY,
+    private int drawDayColumn(Graphics2D graphics, LocalDateTime now, LocalDate day, List<Event> events, int x, int width, String label, int spanningEndY,
                               Map<LocalDate, CareDay> custodySchedule) {
         Locale locale = Locale.GERMAN;
         String dayName = day.getDayOfWeek().getDisplayName(TextStyle.FULL, locale);
@@ -283,6 +283,10 @@ public class ImageRenderer {
                     : "";
             List<String> participants = event.participants() != null ? event.participants() : List.of();
             drawTimedEvent(graphics, time, participants, event.summary(), event.color(), event.source(), x, eventY, width);
+            if (isPast(event, day, now)) {
+                // Vergangene Termine ausgegraut: weißes Schachbrettraster über die Zeile legen
+                fillDithered(graphics, x, eventY, width + 1, 28, COLOR_WHITE);
+            }
             eventY += 30;
         }
 
@@ -325,6 +329,15 @@ public class ImageRenderer {
         // Text "Keine Termine" zentriert unterhalb des Smileys
         int textY = smileyY + smileyDiameter + 30;
         FontHelper.drawString(graphics, "Keine Termine", Aligment.CENTER, titleFont.get(), 18, COLOR_BLACK, x, textY, width, 20);
+    }
+
+    /** Termin des heutigen Tages, der bereits beendet ist (Ende bzw. Start vor "jetzt"). */
+    private boolean isPast(Event event, LocalDate day, LocalDateTime now) {
+        if (!day.equals(now.toLocalDate()) || event.startTime() == null) {
+            return false;
+        }
+        LocalDateTime end = event.endTime() != null ? event.endTime() : event.startTime();
+        return end.isBefore(now);
     }
 
     private boolean isAllDay(Event event) {
