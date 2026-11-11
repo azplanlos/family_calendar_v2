@@ -42,9 +42,9 @@ gemeinsamen veränderlichen Ressourcen teilen.
 
 Der Device-Pfad wird dagegen **klein und additiv erweitert** (`EventRepository` und
 `CreateKalenderImage`): Er rendert den Outlook-Feed zusätzlich zum Familienkalender
-**unanonymisiert** und weist dessen Events dem Participant (`ANON_PARTICIPANT`) zu.
+**ohne eigene Anonymisierung** und weist dessen Events dem Participant (`ANON_PARTICIPANT`) zu.
 `ImageRenderer`, `IcalParser` und das `Event`-Record bleiben unverändert. Aus derselben
-Quelle entstehen damit zwei Sichten: **Device = Original + Participant-Zuordnung**,
+Quelle entstehen damit zwei Sichten: **Device = Feed ohne eigene Anonymisierung + Participant-Zuordnung**,
 **FamilyWall = anonymisiert**. Die S3-Artefakte (`calendar.png`, `calendar.bin`) werden
 weiterhin ausschließlich von `CreateKalenderImage` geschrieben; der Feed-Endpoint verändert
 sie nicht.
@@ -139,7 +139,13 @@ public class FeedAnonymizer {
     // (reine, testbare Transformation ohne verdeckten Uhrzugriff).
     Calendar anonymize(Calendar source, AnonConfig config, java.time.Instant now);
 
+    // Kategorie, die ein Event ebenfalls als privat markiert (fest, nicht konfigurierbar)
+    static final String PRIVATE_CATEGORY = "privat";
+
     // true  <=> CLASS-Wert (case-insensitive getrimmt) ist PRIVATE oder CONFIDENTIAL
+    //           ODER irgendein Einzelwert irgendeiner CATEGORIES-Property (mehrere Zeilen,
+    //           kommagetrennte Listen) ist getrimmt/case-insensitive exakt "privat"
+    //           (Teilwörter wie "Privatsache" oder "Privat-Familie" treffen nicht)
     static boolean isPrivate(VEvent event);
 
     // true  <=> TRANSP=TRANSPARENT ODER X-MICROSOFT-CDO-BUSYSTATUS=FREE (case-insensitive, getrimmt)
@@ -161,7 +167,11 @@ Verhalten von `anonymize`:
   - `UID` oder `DTSTART` nicht einlesbar → Event **auslassen** + Log (Requirement 6.4).
   - `isFree` (Status „frei“: `TRANSP=TRANSPARENT` oder `X-MICROSOFT-CDO-BUSYSTATUS=FREE`) → Event **auslassen** (Requirement 9.2, 9.5).
   - `isPast` (kein `RRULE` und Event-Ende ≤ `now`) → Event **auslassen** (Requirement 9.1, 9.3, 9.4). Serientermine mit `RRULE` werden nicht allein wegen eines vergangenen `DTSTART` ausgelassen.
-  - `isPrivate` → **anonymisieren** (Private-Transformation, s. Datenfluss-Tabelle).
+  - `isPrivate` → **anonymisieren** (Private-Transformation, s. Datenfluss-Tabelle). Dabei werden
+    auch die `CATEGORIES` reduziert: alle `CATEGORIES`-Properties entfernen und, falls das Event über
+    die Private_Kategorie privat ist, genau eine `CATEGORIES`-Property mit dem einen passenden Wert
+    (getrimmt, Originalschreibweise, z. B. „privat") ergänzen; bei reinem `CLASS`-Treffer bleibt keine
+    `CATEGORIES` übrig (Requirement 2.8).
   - sonst → **wertidentisch** übernehmen (Public-Passthrough).
   - Die Reihenfolge ist: zuerst UID/DTSTART-Validität, dann Frei-/Vergangenheits-Filter, dann Privat/Public-Transformation. Frei- und Vergangenheits-Filter gelten für private **und** öffentliche Events gleichermaßen.
 - Da ical4j-Properties mutable sind und nicht zwischen Komponenten geteilt werden dürfen,
@@ -221,8 +231,20 @@ Der bisherige 5-Argument-Konstruktor delegiert mit `participantFeedUri = null` u
 Verhalten in `EventRepository`:
 
 - Der Participant-Feed wird mit `IcalParser` über denselben Bereich wie die übrigen Feeds
-  (aktueller Monat + Folgemonat) als `EventSource.CALENDAR` geladen – **unanonymisiert**
-  (Original-`SUMMARY`, auch bei Private_Events).
+  (aktueller Monat + Folgemonat) als `EventSource.CALENDAR` geladen – **ohne eigene Anonymisierung**
+  (der `SUMMARY` des Feeds wird unverändert übernommen, auch bei Private_Events, und nie
+  durch den Platzhalter ersetzt).
+- Einschränkung: Outlook maskiert beim Veröffentlichen als ICS-Link den `SUMMARY` privater
+  Termine selbst (z. B. „Privater Termin"). Das Device kann daher mit einem veröffentlichten
+  ICS-Link nicht den echten Titel privater Termine anzeigen; wie dieser beschafft werden
+  könnte, ist offen und nicht Teil dieses Designs.
+- Das Device zeigt **alle** Events des Outlook-Feeds: keine Filterung nach `Frei_Status`
+  (`TRANSP`/`X-MICROSOFT-CDO-BUSYSTATUS`), `CLASS` oder Kategorie; der `SUMMARY` wird wie geliefert
+  verwendet. Die Frei-/Vergangenheits-Filterung (Requirement 9) gilt nur im `FeedAnonymizer`.
+- Empfehlung: Termine mit der Kategorie „Privat" statt dem Outlook-Privat-Kennzeichen markieren.
+  Outlook maskiert den Titel bei gesetztem Privat-Kennzeichen bereits im ICS-Link („Privater
+  Termin"); die Kategorie hält den Titel auf dem Device lesbar, während der Anonymized_Feed den
+  Termin für FamilyWall trotzdem anonymisiert.
 - Das Anhängen erfolgt **nach** `assignParticipantsToUnassigned(...)` für die übrigen Feeds,
   damit Hauptfeed-Events ohne Teilnehmer nicht dem Participant zugewiesen werden.
 - Ist `trim(participantName)` nicht leer, wird jedes Event kopiert mit
@@ -284,8 +306,20 @@ Datenobjekt.
 
 ### Feld-Transformationstabelle (pro `VEVENT`)
 
-CLASS-Erkennung: `CLASS`-Wert getrimmt, case-insensitive. `PRIVATE`/`CONFIDENTIAL` ⇒ privat;
-alles andere (inkl. fehlend, leer, `PUBLIC`, unbekannt) ⇒ nicht-privat (Requirement 2.4).
+Privat-Erkennung: `CLASS`-Wert getrimmt, case-insensitive. `PRIVATE`/`CONFIDENTIAL` ⇒ privat.
+Zusätzlich ⇒ privat, wenn ein Einzelwert einer `CATEGORIES`-Property getrimmt und case-insensitive
+exakt `privat` ist (`FeedAnonymizer.PRIVATE_CATEGORY`; exakter Kategoriewert, kein Teilwort-Match;
+mehrere `CATEGORIES`-Zeilen und Komma-Listen werden unterstützt). Alles andere (inkl. fehlend, leer,
+`PUBLIC`, unbekannt, ohne Privat-Kategorie) ⇒ nicht-privat (Requirement 2.4, 2.7).
+Motivation: Outlook maskiert den Titel bei gesetztem Privat-Kennzeichen selbst bereits im
+veröffentlichten ICS-Link („Privater Termin"); die Kategorie „Privat" hält den Titel im Feed und auf
+dem Device lesbar, FamilyWall erhält den Termin trotzdem anonymisiert.
+Bei privaten Events werden `CATEGORIES` reduziert (Requirement 2.8): alle `CATEGORIES`-Properties
+werden entfernt; war das Event über die Private_Kategorie privat, wird genau eine `CATEGORIES`-Property
+mit dem einen getrimmten, passenden Wert in Originalschreibweise (z. B. `privat`) wieder hinzugefügt.
+So bleibt die Klassifikation bei erneuter Anonymisierung stabil (Idempotenz, Requirement 6.3), und
+andere Kategorien (z. B. „Arzt", „Gesundheit") gelangen nicht in den Feed. Ist das Event nur über `CLASS`
+privat, bleibt keine `CATEGORIES`-Property übrig. Public-Events behalten ihre `CATEGORIES` unverändert.
 
 | iCal-Feld (`VEVENT`)                         | Private_Event                                   | Public_Event                     |
 |----------------------------------------------|-------------------------------------------------|----------------------------------|
@@ -299,6 +333,7 @@ alles andere (inkl. fehlend, leer, `PUBLIC`, unbekannt) ⇒ nicht-privat (Requir
 | `ATTENDEE`                                     | **entfernen** (alle)                            | übernehmen, falls vorhanden     |
 | `ORGANIZER`                                    | **entfernen**                                   | übernehmen, falls vorhanden     |
 | `ATTACH`                                       | **entfernen** (alle)                            | übernehmen, falls vorhanden     |
+| `CATEGORIES`                                   | **reduzieren**: alle entfernen; falls über Private_Kategorie privat, genau eine `CATEGORIES` mit dem einen Wert (Originalschreibweise, getrimmt, z. B. `privat`) hinzufügen; bei reinem `CLASS`-Treffer keine | unverändert übernehmen |
 | `CLASS`                                        | übernehmen (bleibt `PRIVATE`/`CONFIDENTIAL`)    | übernehmen                       |
 | sonstige Properties (`DTSTAMP`, `STATUS`, `X-MICROSOFT-*`, `TRANSP`, `SEQUENCE`, `PRIORITY`) | unverändert übernehmen | unverändert übernehmen |
 
@@ -401,18 +436,22 @@ Inhaltsfelder, inkl. Sonderzeichen, Leerraum und Unicode in Werten.
 
 **Validates: Requirements 2.5, 3.1, 3.2, 3.3, 3.4**
 
-### Property 6: CLASS-Klassifikation ist case-insensitiv und robust
+### Property 6: Privat-Klassifikation ist case-insensitiv und robust
 
-*Für jeden* `CLASS`-Wert gilt: Das Event wird genau dann als privat eingestuft, wenn der
-getrimmte Wert ohne Berücksichtigung der Groß-/Kleinschreibung `private` oder `confidential`
-ist; in allen anderen Fällen (fehlend, leer, `PUBLIC`, beliebiger anderer String) als
-nicht-privat.
+*Für jedes* Event gilt: Es wird genau dann als privat eingestuft, wenn `CLASS` (getrimmt, ohne
+Berücksichtigung der Groß-/Kleinschreibung) `private` oder `confidential` ist ODER die Kategorie
+„privat" vorliegt (exakter, getrimmter, case-insensitiver Kategoriewert); in allen anderen Fällen
+(fehlend, leer, `PUBLIC`, beliebiger anderer String, keine Privat-Kategorie) als nicht-privat.
+Der Property-Test deckt die `CLASS`-Varianten ab; die Kategorie-Varianten (Schreibweisen, Teilwörter,
+mehrere `CATEGORIES`-Zeilen, Komma-Listen) sind durch den Beispiel-Test `FeedAnonymizerCategoryTest`
+abgedeckt.
 
 **Generator:** `CLASS`-Strings aus { „PRIVATE", „private", „PrIvAtE", „CONFIDENTIAL",
 „confidential", „PUBLIC", „", null/fehlend, zufällige Wörter } sowie mit umgebendem Leerraum.
-**Invariante:** `isPrivate(event) == lowercase(trim(class)) ∈ {private, confidential}`.
+**Invariante:** Für Events ohne Privat-Kategorie gilt `isPrivate(event) == lowercase(trim(class)) ∈ {private, confidential}`;
+allgemein `isPrivate(event) == (CLASS ∈ {private, confidential}) ∨ (Kategorie „privat")`.
 
-**Validates: Requirements 2.4**
+**Validates: Requirements 2.4, 2.7**
 
 ### Property 7: Idempotenz der Anonymisierung
 
@@ -519,7 +558,7 @@ Mit der realen Fixture `src/test/resources/outlook-published-sample.ics` (ein `C
 und ein `CLASS:PRIVATE`-Event, `VTIMEZONE` „Romance Standard Time", `X-WR-CALNAME`):
 
 - **Transformation konkret:** Public-Event „Test normal" bleibt wertgleich (inkl. leeres
-  `LOCATION:` / `DESCRIPTION:\n` gemäß Passthrough); Private-Event „Privater Termin" →
+  `LOCATION:` / `DESCRIPTION:\n` gemäß Passthrough); Private-Event „Privater Termin" (Outlook-Maske in der Quelle) →
   `SUMMARY=Privat`, keine Inhaltsfelder, `DTSTART`/`DTEND`/`TZID`/`UID` erhalten.
 - **Handler-Verhalten** (`ServeAnonymizedFeed` mit gemocktem/lokal injiziertem Fetch):
   - 200 + `Content-Type: text/calendar; charset=utf-8` (1.2).
@@ -529,6 +568,15 @@ und ein `CLASS:PRIVATE`-Event, `VTIMEZONE` „Romance Standard Time", `X-WR-CALN
 - **AnonConfig-Edge-Cases:** `ANON_PLACEHOLDER` fehlt/leer/>255 → „Privat" (2.6);
   `ANON_PARTICIPANT` getrimmt, fehlend, leer, >200 → `X-WR-CALNAME` gesetzt/weggelassen + Log
   (4.1, 4.4, 4.5).
+- **Kategorie „Privat" (`FeedAnonymizerCategoryTest`, Beispiel-Tests):** Varianten
+  („Privat", „privat", „ PRIVAT ") ⇒ privat; nicht passende Kategorien („Privatsache",
+  „Privat-Familie", „Arbeit") ⇒ nicht-privat; zweite `CATEGORIES`-Zeile und Komma-Liste werden
+  erkannt; `CLASS:PRIVATE` funktioniert weiterhin; ein Kategorie-privates Event wird im Output
+  anonymisiert, ohne Leak von Titel und Ort (2.4, 2.7, 2.1, 2.2).
+  Neue Fälle zur `CATEGORIES`-Reduktion (2.8, 6.3): Match klein-/großgeschrieben („privat"/„PRIVAT");
+  privates Event behält nur „privat" (andere Kategorien wie „Arzt", „Gesundheit" aus mehreren Zeilen
+  tauchen im Output nicht auf); `CLASS`-privates Event verliert alle Kategorien; zweiter Durchlauf
+  bleibt privat mit nur „privat"; Public-Event behält seine Kategorien.
 - **Ausgelassene Events:** Feed mit `VEVENT` ohne `UID`/`DTSTART` → fehlt im Output + Log (6.4).
 - **Startup-Validierung:** je eine fehlende Pflicht-ENV → definierter Init-Fehler, der die
   Variable benennt (8.4), unter Beachtung der oben beschriebenen R7.3/R8.3-Auslegung.
@@ -539,13 +587,16 @@ und ein `CLASS:PRIVATE`-Event, `VTIMEZONE` „Romance Standard Time", `X-WR-CALN
   grün (5.1).
 - Neue Beispiel-Tests `EventRepositoryParticipantFeedTest` (JUnit) für die Device-Erweiterung
   (Requirement 10):
-  - Originaltitel wird gerendert, inkl. „Privater Termin" (10.2, 5.1)
+  - Feed-`SUMMARY` wird unverändert übernommen; im Fixture ist „Privater Termin" Outlooks
+    Maske, kein Platzhalter „Privat" (10.2, 5.1)
   - Events des Outlook-Feeds sind dem Participant zugewiesen (10.1, 10.3)
   - Participant erscheint in `getAllParticipants()` (10.3)
   - Hauptfeed-Events ohne Teilnehmer werden nicht dem Participant zugewiesen (10.5)
   - ohne Feed inaktiv, ohne Fehlereintrag (10.6)
   - leerer/blanker Participant lässt Teilnehmer unverändert (10.4)
   - Ladefehler wird als `"Outlook-Feed: ..."` gesammelt, übrige Feeds unberührt (10.7)
+  - Event mit Kategorie „Privat" und `TRANSP:TRANSPARENT`/`BUSYSTATUS:FREE` wird auf dem Device im
+    Klartext angezeigt und dem Participant zugeordnet (10.9, 10.2, 10.3)
 - Nachweis, dass `FeedAnonymizer`/`ServeAnonymizedFeed` keinen `S3Client` nutzen und keine
   Device-Artefakte schreiben (5.2, 5.3) – über Code-/Abhängigkeitsgrenze und einen Test, der
   prüft, dass kein S3-Write erfolgt.
@@ -573,9 +624,11 @@ Smoke-/Inspektionstest: `serverless.yml` enthält die Funktion `ServeAnonymizedF
 | 2.1 SUMMARY → Platzhalter                 | Transformationstabelle, Property 4                                              |
 | 2.2 Inhaltsfelder entfernen (auch wertlos)| Transformationstabelle, Property 4                                              |
 | 2.3 Zeitfelder/UID unverändert (Private)  | Transformationstabelle, Property 2                                              |
-| 2.4 CLASS-Erkennung case-insensitiv       | `FeedAnonymizer.isPrivate`, Property 6                                          |
+| 2.4 CLASS- oder Kategorie-Erkennung (privat/nicht-privat) | `FeedAnonymizer.isPrivate`, Property 6, `FeedAnonymizerCategoryTest` |
 | 2.5 Nicht-privat unverändert              | Transformationstabelle, Property 5                                              |
 | 2.6 ANON_PLACEHOLDER Default „Privat"     | AnonConfig, Testing (Edge-Case)                                                 |
+| 2.7 Kategorie „Privat" (exakt, getrimmt, case-insensitiv; mehrere Zeilen/Listen) | `FeedAnonymizer.isPrivate`/`PRIVATE_CATEGORY`, Property 6 (Invariante), `FeedAnonymizerCategoryTest` |
+| 2.8 Kategorien privater Events reduzieren (nur „privat" bleibt, sonst keine) | Transformationstabelle (`CATEGORIES`), `FeedAnonymizer.anonymize`, Property 7 (Idempotenz), `FeedAnonymizerCategoryTest` |
 | 3.1–3.3 Public wertidentisch              | Transformationstabelle, Property 5 (3.3 auch Property 2)                        |
 | 3.4 fehlendes Feld bleibt weg             | Transformationstabelle, Property 5                                              |
 | 4.1 Participant getrimmt lesen            | AnonConfig                                                                        |
@@ -601,10 +654,11 @@ Smoke-/Inspektionstest: `serverless.yml` enthält die Funktion `ServeAnonymizedF
 | 8.3 ANON_SOURCE_FEED/ANON_PARTICIPANT an FamilyWall-Kalender | Deployment (zweites serverless.yml-Snippet), Komponente 5 |
 | 8.4 Startup-Validierung Pflicht-ENV       | Error Handling (R7.3/R8.4-Auslegung), AnonConfig, Testing                       |
 | 10.1 Outlook-Feed zusätzlich laden/rendern (gleicher Bereich, `EventSource.CALENDAR`) | Komponente 5, Testing (EventRepositoryParticipantFeedTest) |
-| 10.2 Originaler SUMMARY, auch Private     | Komponente 5, Testing (Test „Privater Termin")                                  |
+| 10.2 Feed-SUMMARY unverändert, auch Private | Komponente 5, Testing (Test SUMMARY-Passthrough, Outlook-Maske „Privater Termin") |
 | 10.3 Participant als einziger Teilnehmer  | Komponente 5, Testing (Zuordnung, getAllParticipants)                           |
 | 10.4 Participant leer → Teilnehmer unverändert | Komponente 5, Testing (blanker Participant)                                |
 | 10.5 Anhängen nach Zuweisungsschritt      | Komponente 5, Testing (Hauptfeed-Events ohne Teilnehmer nicht zugewiesen)       |
 | 10.6 Feed fehlt/ungültig → inaktiv, kein Fehler | Komponente 5 (`parseHttpUri`), Error Handling, Testing                   |
 | 10.7 Ladefehler → „Outlook-Feed: …"       | Komponente 5, Error Handling, Testing (Fehlersammlung)                          |
 | 10.8 Keine anonfeed-Komponenten im Device | Overview (Trennung), Komponente 5                                               |
+| 10.9 Device zeigt alle Events (auch frei/Privat-Kategorie), SUMMARY wie geliefert | Komponente 5, Testing (EventRepositoryParticipantFeedTest, Kategorie „Privat" + freier Termin) |

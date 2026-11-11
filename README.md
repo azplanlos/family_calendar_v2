@@ -2,7 +2,7 @@
 
 A serverless family calendar system that renders events, weather, and a monthly overview onto a 3-color e-ink display (800x480, black/white/red). The system consists of a Java backend running on AWS Lambda and an ESP32-S3 firmware that drives the physical display.
 
-In addition, the backend publishes an **anonymized iCal feed** for [FamilyWall](https://www.familywall.com): a third Lambda function (`ServeAnonymizedFeed`) re-serves an [Outlook.com](https://outlook.com) calendar with private appointments reduced to a placeholder ("Privat"), while the e-ink display keeps showing the original titles. See [Anonymized iCal Feed](#anonymized-ical-feed) and [External Services](#external-services).
+In addition, the backend publishes an **anonymized iCal feed** for [FamilyWall](https://www.familywall.com): a third Lambda function (`ServeAnonymizedFeed`) re-serves an [Outlook.com](https://outlook.com) calendar with private appointments reduced to a placeholder ("Privat"), while the e-ink display shows the Outlook titles without that placeholder (private appointments arrive already masked by Outlook, see [External Services](#external-services)). See [Anonymized iCal Feed](#anonymized-ical-feed) and [External Services](#external-services).
 
 > This is the successor to [family_calendar v1](https://github.com/Froschi1860/family_calendar). The v2 rewrite replaces the original architecture with a serverless backend, a dedicated ESP32 firmware with OTA updates, and a cleaner separation between image generation and display rendering.
 a
@@ -59,7 +59,7 @@ a
                └─────────────────────────────────┘
 ```
 
-Two views of the Outlook calendar come out of the same source: the **e-ink display shows the original titles** (assigned to `ANON_PARTICIPANT`), **FamilyWall receives the anonymized feed**.
+Two views of the Outlook calendar come out of the same source: the **e-ink display shows the titles as Outlook publishes them** (assigned to `ANON_PARTICIPANT`; Outlook masks private appointments itself), **FamilyWall receives the anonymized feed**.
 
 ### Backend (Java / AWS Lambda)
 
@@ -111,7 +111,7 @@ The backend integrates the following third-party services. None of them is requi
 
 | Service | Used for | Configuration | Notes |
 |---------|----------|---------------|-------|
-| [Outlook.com](https://outlook.com) | Source of the personal calendar: rendered on the device (original titles) and re-served anonymized to FamilyWall | `ANON_SOURCE_FEED`, `ANON_PARTICIPANT` | Publish the calendar as an ICS link via *Settings → Calendar → Shared calendars → Publish a calendar* ([Microsoft: publishing Internet Calendars](https://support.microsoft.com/en-gb/office/introduction-to-publishing-internet-calendars-a25e68d6-695a-41c6-a701-103d44ba151d)). Choose the detail level that includes titles ("Can view all details"); otherwise the device only sees busy blocks. Private appointments are marked with `CLASS:PRIVATE`. |
+| [Outlook.com](https://outlook.com) | Source of the personal calendar: rendered on the device (titles as published) and re-served anonymized to FamilyWall | `ANON_SOURCE_FEED`, `ANON_PARTICIPANT` | Publish the calendar as an ICS link via *Settings → Calendar → Shared calendars → Publish a calendar* ([Microsoft: publishing Internet Calendars](https://support.microsoft.com/en-gb/office/introduction-to-publishing-internet-calendars-a25e68d6-695a-41c6-a701-103d44ba151d)). Choose the detail level that includes titles ("Can view all details"); otherwise the device only sees busy blocks. **Mark private appointments with the category "privat"** (case-insensitive) instead of Outlook's *Private* flag: the title then stays readable on the device and is anonymized for FamilyWall. Outlook itself replaces the title of appointments with the *Private* flag by a fixed mask (e.g. "Privater Termin") in published ICS links, even at "all details" — such appointments show that mask on the device too. |
 | [FamilyWall](https://www.familywall.com) | Family organizer app that subscribes to the anonymized feed | Function URL of `ServeAnonymizedFeed` (+ `?token=<ANON_API_SECRET>`) | Subscribing to an external ICS URL is a Premium feature ([FamilyWall: import from an external calendar](https://support.familywall.com/en/support/solutions/articles/47001250207-import-events-file-or-url-from-an-external-calendar)). Share the subscribed calendar with the member named in `ANON_PARTICIPANT`. |
 | [wechselplan.de](https://wechselplan.de) | Shared-custody (Wechselmodell) plan: care pictogram and shading of the father's days | `CUSTODY_CALENDAR_FEED`, `CUSTODY_MALE_MATCH` | Use the calendar subscription (ICS) link of your plan. See [Shared-Custody Calendar](#shared-custody-calendar-wechselmodell). |
 | [OpenWeatherMap](https://openweathermap.org/api/one-call-3) | 3-day weather forecast | `OPENWEATHER_API_KEY`, `OPENWEATHER_LAT`, `OPENWEATHER_LON` | Requires a One Call API 3.0 subscription. |
@@ -201,7 +201,7 @@ serverless deploy --stage prod
 | `OPENWEATHER_LON` | Longitude for weather forecast | `11.5820` |
 | `API_SECRET` | Shared secret for ESP32 authentication (Bearer token) | |
 | `UPDATE_INTERVAL_MINUTES` | Minutes between scheduled image regenerations | `360` |
-| `ANON_SOURCE_FEED` | Outlook iCal feed URL. Served anonymized to FamilyWall **and** rendered un-anonymized on the device (optional for the device; required for `ServeAnonymizedFeed`) | `https://outlook.office365.com/owa/calendar/…/calendar.ics` |
+| `ANON_SOURCE_FEED` | Outlook iCal feed URL. Served anonymized to FamilyWall **and** rendered on the device without own anonymization (optional for the device; required for `ServeAnonymizedFeed`) | `https://outlook.office365.com/owa/calendar/…/calendar.ics` |
 | `ANON_PARTICIPANT` | Person the Outlook events belong to: participant badge on the device and `X-WR-CALNAME` of the FamilyWall feed (optional) | `Max` |
 | `ANON_PLACEHOLDER` | Title that replaces private events in the FamilyWall feed (optional) | `Privat` |
 | `ANON_API_SECRET` | Optional `?token=` guard for the anonymized feed; empty = open access | |
@@ -408,7 +408,7 @@ The party per day is derived from the `SUMMARY` via the `CUSTODY_MALE_MATCH` sub
 
 ## Anonymized iCal Feed
 
-The `ServeAnonymizedFeed` Lambda (Function URL) re-serves an [Outlook.com](https://outlook.com) iCal feed with private event details stripped, so it can be subscribed in [FamilyWall](https://www.familywall.com) without leaking what a private appointment is about. Events whose `CLASS` is `PRIVATE`/`CONFIDENTIAL` keep their time, duration, UID and timezone but get their `SUMMARY` replaced by a placeholder and their content fields (`DESCRIPTION`, `LOCATION`, `URL`, `ATTENDEE`, `ORGANIZER`, `ATTACH`) removed. Public events pass through unchanged. Anonymization only affects this outbound feed; the code lives in the separate package `de.goForFun.familienkalender.anonfeed` and never touches S3 or the device path.
+The `ServeAnonymizedFeed` Lambda (Function URL) re-serves an [Outlook.com](https://outlook.com) iCal feed with private event details stripped, so it can be subscribed in [FamilyWall](https://www.familywall.com) without leaking what a private appointment is about. Events whose `CLASS` is `PRIVATE`/`CONFIDENTIAL` **or that carry the category `Privat`** (any of their `CATEGORIES`, trimmed, case-insensitive) keep their time, duration, UID and timezone but get their `SUMMARY` replaced by a placeholder and their content fields (`DESCRIPTION`, `LOCATION`, `URL`, `ATTENDEE`, `ORGANIZER`, `ATTACH`) removed. Their `CATEGORIES` are reduced as well: only the `privat` category is kept (in its original spelling) when it made the event private; all other categories, such as `Arzt`, are dropped. Public events pass through unchanged. Anonymization only affects this outbound feed; the code lives in the separate package `de.goForFun.familienkalender.anonfeed` and never touches S3 or the device path.
 
 Two filters keep the feed lean (see spec Requirement 9):
 
@@ -425,7 +425,7 @@ The same source feeds two views:
 
 | View | Titles | Assignment |
 |------|--------|------------|
-| e-ink device (`CreateKalenderImage`) | **original**, including private events | every event gets exactly `ANON_PARTICIPANT` as participant badge |
+| e-ink device (`CreateKalenderImage`) | **as published by Outlook**, no own anonymization — events with category `Privat` in clear text, events with Outlook's *Private* flag carry Outlook's mask (see [External Services](#external-services)); free and busy events alike | every event gets exactly `ANON_PARTICIPANT` as participant badge |
 | FamilyWall (`ServeAnonymizedFeed`) | private events replaced by `ANON_PLACEHOLDER` | calendar named `ANON_PARTICIPANT` (`X-WR-CALNAME`) |
 
 On the device the Outlook feed is loaded **in addition** to `CALENDAR_FEED` over the same date range. Details (see spec Requirement 10):

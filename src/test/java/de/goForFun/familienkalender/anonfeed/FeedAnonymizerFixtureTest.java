@@ -47,7 +47,10 @@ class FeedAnonymizerFixtureTest {
             "040000008200E00074C5B7101A82E0080000000036953804C066DD010000000000000000"
                     + "100000005980B267F07AF8478A0935B5A2A07267";
 
-    /** UID des privaten Events „Privater Termin" aus der Fixture. */
+    /**
+     * UID des privaten Events aus der Fixture. Dessen SUMMARY „Privater Termin" ist Outlooks
+     * eigene Maske für private Termine in veröffentlichten ICS-Links, nicht der echte Titel.
+     */
     private static final String PRIVATE_UID =
             "040000008200E00074C5B7101A82E008000000002E78C80CC066DD010000000000000000"
                     + "100000009C31329527338F4C893933EB5DD0379E";
@@ -131,7 +134,7 @@ class FeedAnonymizerFixtureTest {
             assertThat(tzid(outEvent, Property.DTEND)).contains(TZID);
             assertThat(value(outEvent, Property.UID)).isEqualTo(PRIVATE_UID);
 
-            // Original-Summary leakt nicht in den serialisierten Feed.
+            // Der Quell-SUMMARY (hier Outlooks Maske) leakt nicht in den serialisierten Feed.
             assertThat(anonymized.toString()).doesNotContain("Privater Termin");
         }
     }

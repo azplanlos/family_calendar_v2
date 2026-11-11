@@ -5,9 +5,11 @@ import net.fortuna.ical4j.model.Component;
 import net.fortuna.ical4j.model.ComponentList;
 import net.fortuna.ical4j.model.Property;
 import net.fortuna.ical4j.model.PropertyList;
+import net.fortuna.ical4j.model.TextList;
 import net.fortuna.ical4j.model.component.CalendarComponent;
 import net.fortuna.ical4j.model.component.VEvent;
 import net.fortuna.ical4j.model.component.VTimeZone;
+import net.fortuna.ical4j.model.property.Categories;
 import net.fortuna.ical4j.model.property.Summary;
 import net.fortuna.ical4j.model.property.XProperty;
 
@@ -45,6 +47,14 @@ public class FeedAnonymizer {
     private static final String CLASS_PRIVATE = "private";
     private static final String CLASS_CONFIDENTIAL = "confidential";
 
+    /**
+     * Outlook-Kategorie, die ein Event zusätzlich als privat kennzeichnet (Vergleich getrimmt,
+     * ohne Groß-/Kleinschreibung). Hintergrund: Outlook maskiert Termine mit Privat-Flag in
+     * veröffentlichten ICS-Links selbst; über die Kategorie bleibt der Titel im Feed (und damit
+     * auf dem Device) im Klartext, während der FamilyWall-Feed ihn trotzdem anonymisiert.
+     */
+    static final String PRIVATE_CATEGORY = "privat";
+
     /** iCal-Eigenschaft für Frei/Belegt (RFC 5545): TRANSPARENT = frei (Requirement 9.5). */
     private static final String TRANSP = "TRANSP";
     private static final String TRANSP_TRANSPARENT = "transparent";
@@ -73,15 +83,22 @@ public class FeedAnonymizer {
     /**
      * Prüft, ob ein {@link VEvent} als privat einzustufen ist.
      *
-     * <p>Der {@code CLASS}-Wert wird getrimmt und case-insensitiv verglichen: {@code PRIVATE}
-     * oder {@code CONFIDENTIAL} ⇒ privat. In allen anderen Fällen – fehlende, leere,
-     * {@code PUBLIC} oder unbekannte {@code CLASS}-Eigenschaft – ⇒ nicht-privat
-     * (Requirement 2.4).
+     * <p>Privat, wenn mindestens eines gilt (jeweils getrimmt, ohne Groß-/Kleinschreibung):
+     * <ul>
+     *   <li>{@code CLASS} ist {@code PRIVATE} oder {@code CONFIDENTIAL} (Requirement 2.4);</li>
+     *   <li>eine der {@code CATEGORIES} ist {@value #PRIVATE_CATEGORY} (Requirement 2.7).</li>
+     * </ul>
+     * In allen anderen Fällen – fehlende, leere, {@code PUBLIC} oder unbekannte
+     * {@code CLASS}-Eigenschaft ohne passende Kategorie – ⇒ nicht-privat.
      *
      * @param event das zu prüfende Event (darf nicht {@code null} sein)
      * @return {@code true} genau dann, wenn das Event privat ist
      */
     public static boolean isPrivate(VEvent event) {
+        return hasPrivateClass(event) || hasPrivateCategory(event);
+    }
+
+    private static boolean hasPrivateClass(VEvent event) {
         Optional<Property> clazz = event.getProperty(Property.CLASS);
         if (clazz.isEmpty()) {
             return false;
@@ -92,6 +109,29 @@ public class FeedAnonymizer {
         }
         String normalized = value.trim().toLowerCase(Locale.ROOT);
         return normalized.equals(CLASS_PRIVATE) || normalized.equals(CLASS_CONFIDENTIAL);
+    }
+
+    /** Prüft alle {@code CATEGORIES}-Eigenschaften auf die Kategorie {@value #PRIVATE_CATEGORY}. */
+    private static boolean hasPrivateCategory(VEvent event) {
+        return findPrivateCategory(event).isPresent();
+    }
+
+    /**
+     * Liefert den ersten Kategoriewert, der (getrimmt, ohne Groß-/Kleinschreibung) der
+     * Kategorie {@value #PRIVATE_CATEGORY} entspricht – in der Schreibweise der Quelle, getrimmt.
+     */
+    private static Optional<String> findPrivateCategory(VEvent event) {
+        for (Property property : event.getProperties(Property.CATEGORIES)) {
+            Iterable<String> texts = property instanceof Categories categories
+                    ? categories.getCategories().getTexts()
+                    : List.of(property.getValue() == null ? new String[0] : property.getValue().split(","));
+            for (String text : texts) {
+                if (text != null && text.trim().equalsIgnoreCase(PRIVATE_CATEGORY)) {
+                    return Optional.of(text.trim());
+                }
+            }
+        }
+        return Optional.empty();
     }
 
     /**
@@ -314,6 +354,13 @@ public class FeedAnonymizer {
         event.removeAll(Property.SUMMARY);
         event.add(new Summary(config.placeholder()));
         event.removeAll(PRIVATE_FIELDS_TO_REMOVE);
+
+        // Weitere Kategorien (z. B. „Arzt") verraten den Terminzweck: alle entfernen und nur die
+        // Privat-Kategorie behalten, falls das Event über sie als privat erkannt wurde. So bleibt
+        // die Klassifikation beim erneuten Anonymisieren stabil (Requirement 2.8, 6.3).
+        Optional<String> privateCategory = findPrivateCategory(event);
+        event.removeAll(Property.CATEGORIES);
+        privateCategory.ifPresent(c -> event.add(new Categories(new TextList(c))));
     }
 
     /**
