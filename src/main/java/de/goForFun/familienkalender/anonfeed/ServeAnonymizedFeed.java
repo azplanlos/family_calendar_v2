@@ -4,7 +4,21 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPResponse;
+import de.goForFun.familienkalender.AppTimeZone;
 import de.goForFun.familienkalender.IcalParser;
+import de.goForFun.familienkalender.outlook.GraphConfig;
+import de.goForFun.familienkalender.outlook.GraphSource;
+import de.goForFun.familienkalender.outlook.HorizonDays;
+import de.goForFun.familienkalender.outlook.IcsFetchException;
+import de.goForFun.familienkalender.outlook.JdkGraphHttp;
+import de.goForFun.familienkalender.outlook.OutlookCalendarLoader;
+import de.goForFun.familienkalender.outlook.OutlookLoad;
+import de.goForFun.familienkalender.outlook.OutlookLog;
+import de.goForFun.familienkalender.outlook.OutlookSourceSelector;
+import de.goForFun.familienkalender.outlook.QueryWindow;
+import de.goForFun.familienkalender.outlook.QueryWindows;
+import de.goForFun.familienkalender.outlook.SsmRefreshTokenStore;
+import software.amazon.awssdk.services.ssm.SsmClient;
 import net.fortuna.ical4j.data.CalendarBuilder;
 import net.fortuna.ical4j.data.CalendarOutputter;
 import net.fortuna.ical4j.data.ParserException;
@@ -18,8 +32,10 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -88,17 +104,33 @@ public class ServeAnonymizedFeed implements RequestHandler<APIGatewayV2HTTPEvent
             return plainText(401, "Unauthorized");
         }
 
-        // 2. Quellfeed-Konfiguration validieren (Requirement 1.4 → 500)
-        URI sourceFeed = config.sourceFeed();
-        if (sourceFeed == null) {
-            context.getLogger().log("ERROR: ANON_SOURCE_FEED fehlt oder ist keine gültige http(s)-URL");
-            return plainText(500, "Konfiguration des Quellfeeds (ANON_SOURCE_FEED) fehlt oder ist ungültig");
-        }
+        // 2. Graph-Konfiguration je Anfrage frisch lesen (Requirement 1.7)
+        OutlookLog log = logAdapter(context);
+        GraphConfig graphConfig = loadGraphConfig();
 
-        // 3. Abruf + Transformation; Netzwerk-/Parsefehler → 502 (Requirement 1.5)
+        // 3. Abfragefenster (Requirement 4.2, 4.3)
+        HorizonDays.Result horizon = HorizonDays.parse(System.getenv("GRAPH_HORIZON_DAYS"));
+        if (horizon.invalidWarning()) {
+            log.warn("GRAPH_HORIZON_DAYS ist ungültig, Standardwert " + HorizonDays.DEFAULT + " wird verwendet");
+        }
+        Instant now = now();
+        QueryWindow window = QueryWindows.feed(now, horizon.days());
+
+        // 4. Laden (Graph, sonst ICS-Fallback) + Transformation; Fehler → 500/502
         try {
-            Calendar source = fetchAndParse(sourceFeed);
-            Calendar anonymized = anonymizer.anonymize(source, config, Instant.now());
+            OutlookLoad load = createLoader(config, graphConfig, log).load(window);
+
+            if (load instanceof OutlookLoad.NotConfigured) {
+                context.getLogger().log("ERROR: ANON_SOURCE_FEED fehlt oder ist keine gültige http(s)-URL");
+                return plainText(500, "Konfiguration des Quellfeeds (ANON_SOURCE_FEED) fehlt oder ist ungültig");
+            }
+            if (load instanceof OutlookLoad.Unavailable unavailable) {
+                context.getLogger().log("ERROR: Outlook_Source_Feed nicht verarbeitbar: " + unavailable.detail());
+                return plainText(502, "Outlook_Source_Feed konnte nicht abgerufen oder gelesen werden");
+            }
+
+            Calendar source = ((OutlookLoad.Loaded) load).calendar();
+            Calendar anonymized = anonymizer.anonymize(source, config, now);
             String body = serialize(anonymized);
 
             Map<String, String> headers = new HashMap<>();
@@ -118,6 +150,59 @@ public class ServeAnonymizedFeed implements RequestHandler<APIGatewayV2HTTPEvent
             context.getLogger().log("ERROR: Unerwarteter Fehler bei der Anonymisierung: " + e);
             return plainText(502, "Outlook_Source_Feed konnte nicht verarbeitet werden");
         }
+    }
+
+    /** Liest die Graph-Konfiguration je Anfrage aus der Umgebung (Seam für Tests). */
+    GraphConfig loadGraphConfig() {
+        return GraphConfig.fromEnv();
+    }
+
+    /** Aktueller Zeitpunkt (Seam für Tests). */
+    Instant now() {
+        return Instant.now();
+    }
+
+    /**
+     * Erzeugt den Loader für den Outlook-Kalender (Seam für Tests). Default: Quellenauswahl
+     * Graph mit ICS-Fallback; der Fallback nutzt {@link #fetchAndParse(URI)}.
+     */
+    OutlookCalendarLoader createLoader(AnonConfig cfg, GraphConfig graphCfg, OutlookLog log) {
+        ZoneId zone = AppTimeZone.resolveWithReason(System.getenv(AppTimeZone.ENV_NAME)).zone();
+        return new OutlookSourceSelector(graphCfg,
+                () -> new GraphSource(graphCfg, new SsmRefreshTokenStore(ssmClient()),
+                        new JdkGraphHttp(), Clock.systemUTC(), zone, log),
+                cfg.sourceFeed(),
+                url -> {
+                    try {
+                        return fetchAndParse(url);
+                    } catch (FeedUnavailableException e) {
+                        throw new IcsFetchException(e.getMessage(), e);
+                    }
+                },
+                log);
+    }
+
+    private SsmClient ssm;
+
+    private synchronized SsmClient ssmClient() {
+        if (ssm == null) {
+            ssm = SsmClient.create();
+        }
+        return ssm;
+    }
+
+    private static OutlookLog logAdapter(Context context) {
+        return new OutlookLog() {
+            @Override
+            public void warn(String message) {
+                context.getLogger().log("WARN: " + message);
+            }
+
+            @Override
+            public void error(String message) {
+                context.getLogger().log("ERROR: " + message);
+            }
+        };
     }
 
     /**

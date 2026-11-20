@@ -41,7 +41,9 @@ public interface IcalMapping {
     }
 
     default String mapSummary(Summary value) {
-        return value != null ? value.getValue() : null;
+        // trim(): der ical4j-Stream-Parser entfernt umgebende Leerzeichen; In-Memory-Kalender
+        // (Graph-Mapper) sollen identisch gelesen werden.
+        return value != null && value.getValue() != null ? value.getValue().trim() : null;
     }
 
     default <T extends Temporal> LocalDateTime unwrapDateProperty(Optional<? extends DateProperty<T>> optional) {

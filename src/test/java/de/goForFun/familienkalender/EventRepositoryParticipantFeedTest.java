@@ -99,7 +99,7 @@ class EventRepositoryParticipantFeedTest {
     @Test
     void ohneParticipantFeedBleibtAllesUnveraendert(@TempDir Path dir) throws Exception {
         URI main = mainFeed(dir);
-        EventRepository withNull = new EventRepository(main, null, null, null, "Max", DAY, null);
+        EventRepository withNull = new EventRepository(main, null, null, (URI) null, "Max", DAY, null);
         EventRepository legacy = new EventRepository(main, null, null, DAY, null);
 
         assertThat(withNull.getEventsForDay(DAY)).isEqualTo(legacy.getEventsForDay(DAY));

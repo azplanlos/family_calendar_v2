@@ -61,6 +61,8 @@ a
 
 Two views of the Outlook calendar come out of the same source: the **e-ink display shows the titles as Outlook publishes them** (assigned to `ANON_PARTICIPANT`; Outlook masks private appointments itself), **FamilyWall receives the anonymized feed**.
 
+**Outlook via Microsoft Graph (optional):** `ServeAnonymizedFeed` and `CreateKalenderImage` share one Graph source in the package `de.goForFun.familienkalender.outlook`. When it is configured, both functions read the Outlook calendar from Microsoft Graph first and use the ICS link `ANON_SOURCE_FEED` only as fallback. `ServeCalendarImage` is not part of this: it neither uses the package `outlook` nor gets the Graph variables or the SSM/KMS permissions. See [Outlook via Microsoft Graph](#outlook-via-microsoft-graph).
+
 ### Backend (Java / AWS Lambda)
 
 The backend is a Java 21 application packaged as an uber-JAR and deployed to AWS Lambda via the Serverless Framework.
@@ -205,6 +207,11 @@ serverless deploy --stage prod
 | `ANON_PARTICIPANT` | Person the Outlook events belong to: participant badge on the device and `X-WR-CALNAME` of the FamilyWall feed (optional) | `Max` |
 | `ANON_PLACEHOLDER` | Title that replaces private events in the FamilyWall feed (optional) | `Privat` |
 | `ANON_API_SECRET` | Optional `?token=` guard for the anonymized feed; empty = open access | |
+| `GRAPH_CLIENT_ID` | Optional. Client ID of the Azure app registration. Graph is used only when this **and** `GRAPH_REFRESH_TOKEN_PARAM` are non-empty; otherwise the ICS link `ANON_SOURCE_FEED` is used as before. Set for `ServeAnonymizedFeed` and `CreateKalenderImage`. Default: empty | |
+| `GRAPH_REFRESH_TOKEN_PARAM` | Optional. Name of the SSM SecureString parameter holding the refresh token (never the token itself). Set for `ServeAnonymizedFeed` and `CreateKalenderImage`. Default: empty | `/familienkalender/graph-refresh-token` |
+| `GRAPH_HORIZON_DAYS` | Optional. Days into the future for the Graph query window of the anonymized feed (integer 1 to 730; invalid values fall back to the default). Applies only to `ServeAnonymizedFeed`; the device uses a fixed window (start of current month to end of next month). Default: `365` | `365` |
+
+In `serverless.yml` the Graph values come from the deploy parameters `graphClientId`, `graphRefreshTokenParam` and `graphHorizonDays`.
 
 See `.env.example` for a local reference.
 
@@ -435,6 +442,72 @@ On the device the Outlook feed is loaded **in addition** to `CALENDAR_FEED` over
 - If `ANON_SOURCE_FEED` is empty or not a valid http(s) URL, the device renders as before, without an error.
 - If the Outlook feed cannot be loaded, an `Outlook-Feed: …` error is reported like other feed errors; the remaining feeds render normally.
 - Only events with a `TZID` (as Outlook publishes them) or all-day dates are expanded by `IcalParser`; floating or UTC-only times are currently skipped.
+
+## Outlook via Microsoft Graph
+
+The ICS link of Outlook.com has two limits: Outlook replaces the title of appointments with the *Private* flag by a fixed mask ("Privater Termin"), and it exports no `CATEGORIES`. With Microsoft Graph, both `ServeAnonymizedFeed` (FamilyWall feed) and `CreateKalenderImage` (e-ink device) get the real title, the sensitivity, the categories and the free/busy state. The device then shows the real title of private appointments, and the anonymized feed recognizes private appointments by the *Private* flag or the category `Privat`. Graph is optional. Without it everything behaves as before.
+
+### Setup (in this order)
+
+1. **Create the app registration** in the [Azure portal](https://portal.azure.com) (*Microsoft Entra ID → App registrations → New registration*):
+   - Supported account types: **personal Microsoft accounts only**.
+   - *Authentication → Advanced settings*: enable **Allow public client flows**.
+   - No client secret.
+   - *API permissions*: delegated **`Calendars.Read`** and **`offline_access`**.
+   - Note the *Application (client) ID*. It is not a secret, but keep it out of the repository.
+2. **Run the bootstrap program** once locally. It performs the OAuth device code login and writes the refresh token directly into SSM as a SecureString (the token is never printed or written to a file). AWS credentials come from the default AWS SDK chain and need `ssm:PutParameter` on the parameter.
+
+   ```bash
+   # Linux / macOS
+   ./mvnw exec:java@graph-bootstrap -Dexec.args="--client-id <CLIENT_ID> --param /familienkalender/graph-refresh-token"
+   # Windows
+   .\mvnw.cmd exec:java@graph-bootstrap -Dexec.args="--client-id <CLIENT_ID> --param /familienkalender/graph-refresh-token"
+   ```
+
+   Alternatively set the environment variables `GRAPH_CLIENT_ID` and `GRAPH_REFRESH_TOKEN_PARAM` and omit `-Dexec.args`; a program argument takes precedence over the variable. The program prints a verification URL and a code. Open <https://www.microsoft.com/link>, enter the code and sign in with the Outlook.com account. Before saving, the program checks that a refresh token was issued and that a probe query on `/me/calendarView` succeeds; otherwise it exits with a non-zero code and leaves SSM unchanged. The bootstrap classes are excluded from the Lambda uber-JAR.
+3. **Set the deploy parameters** `graphClientId` (the client ID) and `graphRefreshTokenParam` (the SSM parameter name, with leading `/`). Optionally set `graphHorizonDays`. See [Environment Variables](#environment-variables).
+4. **Deploy** (see [Deployment](#deployment)). When both Graph values are empty, the deployment contains no SSM/KMS permissions and nothing changes in behavior.
+
+### Fallback behavior
+
+| Situation | `ServeAnonymizedFeed` | `CreateKalenderImage` (device) |
+|-----------|----------------------|-------------------------------|
+| Graph not configured (one or both of `GRAPH_CLIENT_ID` / `GRAPH_REFRESH_TOKEN_PARAM` empty; if only one is set, a warning is logged) | ICS link `ANON_SOURCE_FEED`, exactly as before | ICS link, exactly as before |
+| Graph succeeds (also with 0 appointments) | Graph data, ICS link is not called; `ANON_SOURCE_FEED` may be empty | Graph data, ICS link is not called, no `Outlook-Feed:` error entry |
+| Graph fails (invalid token, SSM error, network, timeout, HTTP error, unparsable response, more than 50 pages, time budget) | ICS link as fallback, HTTP 200, one warning in the log with the error category | ICS link as fallback, one warning in the log, no error entry in the image |
+| Graph fails and `ANON_SOURCE_FEED` is empty or invalid | HTTP **502** | Error entry `Outlook-Feed: Graph nicht verfügbar (<category>)`; no Outlook appointments, other feeds render normally |
+| Graph fails and the ICS fallback fails too | HTTP **502** | Error entry `Outlook-Feed: <error message of the ICS fetch>`; no Outlook appointments, other feeds render normally |
+
+- The Graph path has a **time budget of 15 s** (SSM read, token exchange, all pages, write-back). Every single HTTP call has at most 10 s connect and request timeout.
+- The ICS fallback has its own **10 s** timeout, independent of the time already used by Graph.
+- Graph and ICS appointments are never mixed within one run.
+- The device shows at most one `Outlook-Feed:` entry per run. Logs and error entries contain no tokens and no appointment content, only error categories, HTTP status codes and Graph error codes.
+- The device queries Graph for a fixed window (start of the current month to end of the following month in `TIMEZONE`) and shows all appointments, including free and private ones, with the real title. The anonymized feed queries from now minus 1 day to now plus `GRAPH_HORIZON_DAYS`.
+
+### Recovery when the refresh token is invalid
+
+The refresh token is the only state of the Graph integration. It rotates on use (the rotated value is written back to SSM) and expires after **up to 90 days without use**. Because `CreateKalenderImage` runs every 6 hours, it normally stays valid. It becomes invalid when it expires or when the app's access is revoked.
+
+Detect the failure in the CloudWatch logs of `ServeAnonymizedFeed` or `FamilyWall-Kalender`. Each call or run logs one `ERROR` entry:
+
+- `Refresh_Token ungültig, Bootstrap erneut ausführen` (token exchange rejected with HTTP 400/401 or `invalid_grant`), including the SSM parameter name.
+- `SSM_Parameter nicht verfügbar, Bootstrap erneut ausführen oder Parameter prüfen` (parameter missing, empty or not readable), including the parameter name.
+
+Fix: **run the bootstrap program again** (step 2). No redeployment and no change of environment variables is needed; the next call or run uses Graph again. While the token is invalid, the ICS fallback keeps both functions running and the SSM parameter is left untouched.
+
+### Limits of the ICS fallback
+
+While Graph is down or not configured, the limits of the Outlook ICS link apply again:
+
+- Appointments with Outlook's *Private* flag carry the mask "Privater Termin" as title, on the device and in the FamilyWall feed.
+- The ICS link contains no `CATEGORIES`, so the category `Privat` cannot be detected. Private appointments are then recognized only by `CLASS` and are not marked via the category.
+- Only events with a `TZID` or all-day dates are expanded (see [Outlook feed on the device](#outlook-feed-on-the-device)).
+
+### Timeout, permissions and architecture
+
+- `FamilyWall-Kalender` (`CreateKalenderImage`) has an explicit **timeout of 60 s**, because Graph (15 s) plus ICS fallback (10 s) plus the other feeds exceed the provider default of 10 s. `ServeAnonymizedFeed` and `ServeCalendarImage` keep 30 s.
+- The IAM permissions for the SSM parameter (`ssm:GetParameter`, `ssm:PutParameter`, only on its ARN) and for the default key `aws/ssm` (`kms:Decrypt`, `kms:Encrypt`, restricted via `kms:ViaService` to SSM in the deployment region) are granted to **both** `ServeAnonymizedFeed` and `FamilyWall-Kalender`, as function-level roles, and only when `graphRefreshTokenParam` is set. `ServeCalendarImage` gets neither these permissions nor the Graph variables.
+- Both functions use the same `outlook` package (token handling, `calendarView` paging, mapping to iCal events). The device path does not use the `anonfeed` package; anonymization happens only in `ServeAnonymizedFeed`. There is no snapshot: Graph is queried live on every run, and the only persisted state is the refresh token in SSM.
 
 ## Technology Stack
 

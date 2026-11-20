@@ -97,11 +97,31 @@ public class IcalParser {
     /**
      * Interne Methode: Parst einen iCal-InputStream und expandiert alle Events im angegebenen Zeitraum.
      */
-    @SuppressWarnings("unchecked")
     private List<Event> parseForPeriod(InputStream inputStream, ZonedDateTime periodStart, ZonedDateTime periodEnd, EventSource source) throws IOException, ParserException {
         CalendarBuilder builder = new CalendarBuilder();
         Calendar calendar = builder.build(inputStream);
+        return expand(calendar, periodStart, periodEnd, source);
+    }
 
+    /**
+     * Expandiert alle Events eines bereits geparsten Kalenders im angegebenen Datumsbereich.
+     *
+     * @param calendar bereits geparster Kalender
+     * @param from     Startdatum (inklusive)
+     * @param to       Enddatum (inklusive)
+     * @param source   die EventSource, die den geparsten Events zugewiesen wird
+     */
+    public List<Event> parse(Calendar calendar, LocalDate from, LocalDate to, EventSource source) {
+        ZonedDateTime rangeStart = from.atStartOfDay(AppTimeZone.get());
+        ZonedDateTime rangeEnd = to.plusDays(1).atStartOfDay(AppTimeZone.get());
+        return expand(calendar, rangeStart, rangeEnd, source);
+    }
+
+    /**
+     * Interne Methode: Expandiert alle Events eines Kalenders im angegebenen Zeitraum.
+     */
+    @SuppressWarnings("unchecked")
+    private List<Event> expand(Calendar calendar, ZonedDateTime periodStart, ZonedDateTime periodEnd, EventSource source) {
         Period<ZonedDateTime> monthPeriod = new Period<>(periodStart, Duration.between(periodStart, periodEnd));
 
         List<Event> events = new ArrayList<>();
@@ -126,6 +146,20 @@ public class IcalParser {
                     occurrenceEnd = (end instanceof ZonedDateTime zdtEnd)
                             ? zdtEnd.withZoneSameInstant(appZone).toLocalDateTime()
                             : zdt.plusHours(1).withZoneSameInstant(appZone).toLocalDateTime();
+                } else if (start instanceof OffsetDateTime odt) {
+                    // UTC-DTSTART (z. B. 20261124T080000Z) liefert ical4j als OffsetDateTime
+                    ZoneId appZone = AppTimeZone.get();
+                    occurrenceStart = odt.atZoneSameInstant(appZone).toLocalDateTime();
+                    occurrenceEnd = (end instanceof OffsetDateTime odtEnd)
+                            ? odtEnd.atZoneSameInstant(appZone).toLocalDateTime()
+                            : odt.plusHours(1).atZoneSameInstant(appZone).toLocalDateTime();
+                } else if (start instanceof Instant inst) {
+                    // In-Memory-Kalender (Graph-Mapper) mit DtStart<Instant>
+                    ZoneId appZone = AppTimeZone.get();
+                    occurrenceStart = inst.atZone(appZone).toLocalDateTime();
+                    occurrenceEnd = (end instanceof Instant instEnd)
+                            ? instEnd.atZone(appZone).toLocalDateTime()
+                            : inst.plus(Duration.ofHours(1)).atZone(appZone).toLocalDateTime();
                 } else if (start instanceof LocalDate ld) {
                     occurrenceStart = ld.atStartOfDay();
                     occurrenceEnd = (end instanceof LocalDate ldEnd)

@@ -2,6 +2,9 @@ package de.goForFun.familienkalender;
 
 import de.goForFun.familienkalender.model.Event;
 import de.goForFun.familienkalender.model.EventSource;
+import de.goForFun.familienkalender.outlook.OutlookCalendarLoader;
+import de.goForFun.familienkalender.outlook.OutlookLoad;
+import de.goForFun.familienkalender.outlook.QueryWindows;
 import net.fortuna.ical4j.data.ParserException;
 
 import java.io.IOException;
@@ -55,7 +58,7 @@ public class EventRepository {
      * @param holidayProvider     optionaler HolidayProvider (kann null sein)
      */
     public EventRepository(URI feedUri, URI schoolFeedUri, URI vacationFeedUri, LocalDate referenceDate, HolidayProvider holidayProvider) throws IOException, ParserException {
-        this(feedUri, schoolFeedUri, vacationFeedUri, null, null, referenceDate, holidayProvider);
+        this(feedUri, schoolFeedUri, vacationFeedUri, (URI) null, null, referenceDate, holidayProvider);
     }
 
     /**
@@ -71,8 +74,81 @@ public class EventRepository {
                            URI participantFeedUri, String participantName,
                            LocalDate referenceDate, HolidayProvider holidayProvider) throws IOException, ParserException {
         IcalParser icalParser = new IcalParser();
-        List<Event> events = new ArrayList<>();
         List<String> errors = new ArrayList<>();
+        LocalDate rangeStart = YearMonth.from(referenceDate).atDay(1);
+        LocalDate rangeEnd = YearMonth.from(referenceDate).plusMonths(1).atEndOfMonth();
+
+        List<Event> assigned = loadBaseEvents(icalParser, feedUri, schoolFeedUri, vacationFeedUri,
+                referenceDate, holidayProvider, errors);
+
+        // Zusätzlicher Feed (Original-Outlook): NACH der Zuweisung anhängen, damit Events ohne
+        // Teilnehmer aus dem Hauptfeed nicht auch dem Participant zugeordnet werden.
+        if (participantFeedUri != null) {
+            try {
+                assigned.addAll(withParticipant(
+                        icalParser.parse(participantFeedUri, rangeStart, rangeEnd, EventSource.CALENDAR),
+                        participantName));
+            } catch (IOException | ParserException e) {
+                errors.add("Outlook-Feed: " + e.getMessage());
+            }
+        }
+
+        this.allEvents = Collections.unmodifiableList(assigned);
+        this.errors = Collections.unmodifiableList(errors);
+    }
+
+    /**
+     * Wie der 7-Argument-Konstruktor, aber der Outlook-Kalender wird über einen
+     * {@link OutlookCalendarLoader} (Graph oder ICS-Fallback) bezogen. Das Ergebnis wird nach der
+     * Teilnehmerzuweisung angehängt. {@code NotConfigured} erzeugt keinen Eintrag, {@code Unavailable}
+     * genau einen Fehlereintrag; jede {@link RuntimeException} des Loaders wird als nicht verfügbar
+     * behandelt und bricht den Lauf nicht ab.
+     *
+     * @param outlookLoader   Loader für den Outlook-Kalender (kann null sein => inaktiv)
+     * @param participantName Name, dem die Outlook-Events zugewiesen werden (leer => unverändert)
+     */
+    public EventRepository(URI feedUri, URI schoolFeedUri, URI vacationFeedUri,
+                           OutlookCalendarLoader outlookLoader, String participantName,
+                           LocalDate referenceDate, HolidayProvider holidayProvider) throws IOException, ParserException {
+        IcalParser icalParser = new IcalParser();
+        List<String> errors = new ArrayList<>();
+        LocalDate rangeStart = YearMonth.from(referenceDate).atDay(1);
+        LocalDate rangeEnd = YearMonth.from(referenceDate).plusMonths(1).atEndOfMonth();
+
+        List<Event> assigned = loadBaseEvents(icalParser, feedUri, schoolFeedUri, vacationFeedUri,
+                referenceDate, holidayProvider, errors);
+
+        if (outlookLoader != null) {
+            try {
+                OutlookLoad load = outlookLoader.load(QueryWindows.device(referenceDate, AppTimeZone.get()));
+                if (load instanceof OutlookLoad.Loaded loaded) {
+                    assigned.addAll(withParticipant(
+                            icalParser.parse(loaded.calendar(), rangeStart, rangeEnd, EventSource.CALENDAR),
+                            participantName));
+                } else if (load instanceof OutlookLoad.Unavailable unavailable) {
+                    errors.add("Outlook-Feed: " + unavailable.detail());
+                } else if (!(load instanceof OutlookLoad.NotConfigured)) {
+                    errors.add("Outlook-Feed: " + OUTLOOK_UNAVAILABLE);
+                }
+            } catch (RuntimeException e) {
+                errors.add("Outlook-Feed: " + OUTLOOK_UNAVAILABLE);
+            }
+        }
+
+        this.allEvents = Collections.unmodifiableList(assigned);
+        this.errors = Collections.unmodifiableList(errors);
+    }
+
+    private static final String OUTLOOK_UNAVAILABLE = "Outlook-Quelle nicht verfügbar";
+
+    /**
+     * Lädt Haupt-, Schul- und Ferienfeed sowie Feiertage und weist Events ohne Teilnehmer zu.
+     * Fehler einzelner Quellen werden in {@code errors} gesammelt. Die Liste ist veränderlich.
+     */
+    private List<Event> loadBaseEvents(IcalParser icalParser, URI feedUri, URI schoolFeedUri, URI vacationFeedUri,
+                                       LocalDate referenceDate, HolidayProvider holidayProvider,
+                                       List<String> errors) {
+        List<Event> events = new ArrayList<>();
 
         // Ladebereich berechnen: aktueller Monat + Folgemonat, damit Monatswechsel
         // sowohl in der Tagesübersicht (Morgen) als auch im 5-Wochen-Kalenderraster abgedeckt sind.
@@ -113,25 +189,21 @@ public class EventRepository {
             }
         }
 
-        List<Event> assigned = new ArrayList<>(assignParticipantsToUnassigned(events));
+        return new ArrayList<>(assignParticipantsToUnassigned(events));
+    }
 
-        // Zusätzlicher Feed (Original-Outlook): NACH der Zuweisung anhängen, damit Events ohne
-        // Teilnehmer aus dem Hauptfeed nicht auch dem Participant zugeordnet werden.
-        if (participantFeedUri != null) {
-            String name = participantName == null ? "" : participantName.trim();
-            try {
-                for (Event e : icalParser.parse(participantFeedUri, rangeStart, rangeEnd, EventSource.CALENDAR)) {
-                    assigned.add(name.isEmpty() ? e : new Event(
-                            List.of(name), e.startTime(), e.endTime(), e.summary(),
-                            e.color(), e.source(), e.url(), e.uid()));
-                }
-            } catch (IOException | ParserException e) {
-                errors.add("Outlook-Feed: " + e.getMessage());
-            }
+    /** Weist allen Events {@code [trim(name)]} zu, wenn der Name nicht leer ist; sonst unverändert. */
+    private static List<Event> withParticipant(List<Event> parsed, String participantName) {
+        String name = participantName == null ? "" : participantName.trim();
+        if (name.isEmpty()) {
+            return parsed;
         }
-
-        this.allEvents = Collections.unmodifiableList(assigned);
-        this.errors = Collections.unmodifiableList(errors);
+        List<Event> result = new ArrayList<>(parsed.size());
+        for (Event e : parsed) {
+            result.add(new Event(List.of(name), e.startTime(), e.endTime(), e.summary(),
+                    e.color(), e.source(), e.url(), e.uid()));
+        }
+        return result;
     }
 
     /**

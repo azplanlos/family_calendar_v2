@@ -1,0 +1,1339 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Technische Annahmen per Spike-Tests und Kommandos verifizieren (ohne Benutzerinteraktion)": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407702625
+      },
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407726822
+      },
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794412044517
+      }
+    ],
+    "1.2 Graph-Spike mit persönlichem Microsoft-Konto durchführen (BENUTZER ERFORDERLICH, Go/No-Go für das Deployment)": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407702998
+      },
+      {
+        "executionId": "6a444b2f-2945-417d-b4e4-28144ca299c5",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182128991
+      }
+    ],
+    "2.1 `pom.xml` erweitern": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407703359
+      },
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794412048775
+      },
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794412109319
+      }
+    ],
+    "3.1 `GraphConfig` implementieren": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407703775
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182198877
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182421993
+      }
+    ],
+    "3.2 Property-Test: Graph-Zustand aus getrimmten Konfigurationswerten": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407704038
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182572358
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182724589
+      }
+    ],
+    "3.3 `QueryWindow`, `QueryWindows`, `HorizonDays` und TIMEZONE-Auflösung implementieren": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407704221
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182199277
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182422503
+      }
+    ],
+    "3.4 Property-Test: Zeitfenster": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407704457
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182572694
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182724963
+      }
+    ],
+    "3.5 Property-Test: Robuste Konfigurationsauflösung": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407704676
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182573046
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182725674
+      }
+    ],
+    "3.6 `GraphErrorCategory`, `GraphException`, `OutlookLog` implementieren": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407704873
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182199559
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182423170
+      }
+    ],
+    "3.7 `TimeBudget` implementieren": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407705108
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182573400
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182726796
+      }
+    ],
+    "3.8 `GraphEndpoints` implementieren": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407705313
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182199973
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182423534
+      }
+    ],
+    "3.9 Property-Test: Host- und Schema-Guard": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407705494
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182573939
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182727374
+      }
+    ],
+    "4.1 jqwik-Generatoren `GraphArbitraries` erstellen": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407705699
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182430603
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182562391
+      }
+    ],
+    "4.2 `GraphCalendarMapper` implementieren": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407705875
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182731417
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182916446
+      }
+    ],
+    "4.3 Fixture-Test mit realem Beispiel-JSON": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407706109
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182922773
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795183698758
+      }
+    ],
+    "4.4 Property-Test: Ein VEVENT je gültigem, nicht storniertem Event": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407706395
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182923048
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795183698992
+      }
+    ],
+    "4.5 Property-Test: Determinismus des Mappings": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407706606
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182924043
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795183699649
+      }
+    ],
+    "4.6 Property-Test: CLASS-, TRANSP- und BUSYSTATUS-Mapping": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407706825
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182924972
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795183700583
+      }
+    ],
+    "4.7 Property-Test: Textfelder überstehen die Serialisierung": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407707046
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182925743
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795183701528
+      }
+    ],
+    "4.8 Property-Test: UID-Eindeutigkeit und -Stabilität": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407707184
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795183705811
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795183895491
+      }
+    ],
+    "4.9 Property-Test: Zeitangaben-Round-Trip": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407707356
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795183706401
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795183895677
+      }
+    ],
+    "4.10 Property-Test: Kalender-Grundgerüst und VTIMEZONE-Menge": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407707564
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795183707518
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795183896338
+      }
+    ],
+    "5.1 `GraphHttp`, `HttpCall`, `HttpResult`, `JdkGraphHttp` implementieren": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407707750
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182732172
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182916818
+      }
+    ],
+    "5.2 `RefreshTokenStore` und `SsmRefreshTokenStore` implementieren": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407707910
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182733140
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182917475
+      }
+    ],
+    "5.3 `GraphTokenService` implementieren": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407708113
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795183708285
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795183897369
+      }
+    ],
+    "5.4 Property-Test: Token-Request-Formfelder": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407708266
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795183914453
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795184129736
+      }
+    ],
+    "5.5 Property-Test: Klassifikation der Token-Beschaffung": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407708471
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795184135387
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795184444547
+      }
+    ],
+    "5.6 Property-Test: Rotationsentscheidung und Reihenfolge": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407708635
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795184135747
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795184550679
+      }
+    ],
+    "5.7 `GraphCalendarClient` implementieren": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407708842
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795183709073
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795183897882
+      }
+    ],
+    "5.8 Property-Test: Paging": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407709041
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795183914872
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795184130517
+      }
+    ],
+    "5.9 Property-Test: Fehlerhafte Graph-Antworten": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407709275
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795183915725
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795184131278
+      }
+    ],
+    "5.10 Unit-Tests für `GraphTokenService`": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407709406
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795184136550
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795184444959
+      }
+    ],
+    "6. Checkpoint – Graph-Bausteine absichern": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407709595
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795186173474
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795186270535
+      }
+    ],
+    "7.1 `GraphSource` implementieren": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407709820
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795184137418
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795184445174
+      }
+    ],
+    "7.2 Property-Test: Zeitbudget und Einzel-Timeouts": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407710072
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795184454055
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795184551209
+      }
+    ],
+    "8.1 `OutlookLoad`, `OutlookCalendarLoader`, `IcsFetcher`, `IcsFetchException`, `IcsCalendarFetcher` implementieren": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407710324
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795183913425
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795184129165
+      }
+    ],
+    "8.2 `OutlookSourceSelector` implementieren": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407710542
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795184454906
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795184552020
+      }
+    ],
+    "8.3 Property-Test: Quellenauswahl folgt der Entscheidungstabelle": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407710753
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795184565474
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185064702
+      }
+    ],
+    "8.4 Property-Test: Quellen werden nie gemischt": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407710977
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795184565973
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185064904
+      }
+    ],
+    "8.5 Property-Test: Genau eine Fallback-Warnung mit bekannter Kategorie": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407711176
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795184566829
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185065762
+      }
+    ],
+    "8.6 Unit-Tests für `OutlookSourceSelector`": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407711413
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185070522
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185269834
+      }
+    ],
+    "9. Checkpoint – Quellenauswahl absichern": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407711616
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795186343146
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795186444052
+      }
+    ],
+    "10.1 `ServeAnonymizedFeed` auf `OutlookSourceSelector` umstellen": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407711842
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185070727
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185270467
+      }
+    ],
+    "10.2 Unit-Tests `ServeAnonymizedFeedGraphTest`": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407712079
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185279005
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185651385
+      }
+    ],
+    "10.3 Property-Test: Anonymisierung von Graph-Daten": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407712287
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185659274
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185942994
+      }
+    ],
+    "10.4 Property-Test: Idempotenz auf Graph-abgeleiteten Kalendern": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407712516
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185659613
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185943347
+      }
+    ],
+    "11.1 `IcalParser.parse(Calendar, LocalDate, LocalDate, EventSource)` ergänzen": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407712727
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795183913742
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795184129361
+      }
+    ],
+    "11.2 Property-Test: Parser-Äquivalenz": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407712935
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795184137882
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795184445361
+      }
+    ],
+    "11.3 Neuen `EventRepository`-Konstruktor mit `OutlookCalendarLoader` implementieren": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407713148
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795184565073
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185062586
+      }
+    ],
+    "11.4 `CreateKalenderImage` verdrahten": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407713370
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185071371
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185270657
+      }
+    ],
+    "11.5 Unit-Tests `EventRepositoryOutlookLoaderTest`": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407713575
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185279754
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185651939
+      }
+    ],
+    "11.6 Property-Test: Device zeigt genau die Graph-Events des Fensters": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407713762
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185660477
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185943687
+      }
+    ],
+    "11.7 Property-Test: Teilnehmerzuordnung": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407713990
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185661361
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185944293
+      }
+    ],
+    "11.8 Property-Test: Fehlerliste folgt der Entscheidungstabelle": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407714211
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185662137
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185944805
+      }
+    ],
+    "11.9 Property-Test: Ausnahmen der Graph_Source erreichen den Aufrufer nie": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407714424
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185948404
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795186163833
+      }
+    ],
+    "11.10 Property-Test: Keine Geheimnisse und keine Termininhalte": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407714575
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185949222
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795186164605
+      }
+    ],
+    "12. Checkpoint – Aufrufer-Integration absichern": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407714813
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795186444451
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795186535854
+      }
+    ],
+    "13.1 `BootstrapConfig` implementieren": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407714979
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795184455485
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795184552583
+      }
+    ],
+    "13.2 `GraphBootstrap`, `DeviceCodeFlow`, `ScopeCheck` implementieren": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407715165
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795184565250
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185063074
+      }
+    ],
+    "13.3 Unit-Tests `GraphBootstrapTest`": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407715341
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185072432
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185271563
+      }
+    ],
+    "13.4 Property-Test: Bootstrap-Konfiguration": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407715582
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185073080
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185272306
+      }
+    ],
+    "13.5 Property-Test: Device-Code-Polling-Automat": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407715785
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185276776
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185653067
+      }
+    ],
+    "13.6 Property-Test: Scope-Prüfung": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407715988
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185277058
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185653856
+      }
+    ],
+    "13.7 Property-Test: Bootstrap gibt nie Token aus": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407716226
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185277885
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185654636
+      }
+    ],
+    "14.1 `serverless.yml` erweitern": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407716428
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182200305
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182424076
+      }
+    ],
+    "14.2 `ServerlessGraphConfigInspectionTest` schreiben": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407716586
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182733741
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182918299
+      }
+    ],
+    "15.1 `PackageBoundaryInspectionTest` schreiben": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407716806
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185949796
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795186165472
+      }
+    ],
+    "15.2 `PomInspectionTest` schreiben": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407716996
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185950538
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795186166214
+      }
+    ],
+    "16.1 `.env.example` ergänzen": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407717189
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185951022
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795186166718
+      }
+    ],
+    "16.2 `README.md` ergänzen": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407717351
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795186173199
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795186270743
+      }
+    ],
+    "16.3 Textinspektionstest für README und `.env.example`": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407717562
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795186273917
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795186342622
+      }
+    ],
+    "17.1 Gesamtlauf und Nicht-Regression": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407717835
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795186536204
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795186698367
+      }
+    ],
+    "18. Final checkpoint – Ensure all tests pass": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794407718028
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795186698878
+      },
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795186703943
+      }
+    ],
+    "2. Build-Setup": [
+      {
+        "executionId": "4af06a30-dba3-4e22-a1e6-1307e7f905fa",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1794412109649
+      }
+    ],
+    "1. Spike und Verifikation der Annahmen": [
+      {
+        "executionId": "6a444b2f-2945-417d-b4e4-28144ca299c5",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182129696
+      }
+    ],
+    "3. Wertetypen und Hilfsklassen im Paket `outlook`": [
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182727526
+      }
+    ],
+    "14. Deployment-Konfiguration (`serverless.yml`)": [
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795182918463
+      }
+    ],
+    "4. `GraphCalendarMapper` (reine Funktion)": [
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795183896498
+      }
+    ],
+    "5. Transport, Token-Verwaltung und calendarView-Client": [
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795184550859
+      }
+    ],
+    "7. `GraphSource`": [
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795184551359
+      }
+    ],
+    "8. Quellenauswahl und ICS-Fallback": [
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185270132
+      }
+    ],
+    "13. Bootstrap-Programm (`outlook.bootstrap`)": [
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185654799
+      }
+    ],
+    "10. Integration in `ServeAnonymizedFeed`": [
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795185943498
+      }
+    ],
+    "11. Device-Pfad (`IcalParser`, `EventRepository`, `CreateKalenderImage`)": [
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795186164779
+      }
+    ],
+    "15. Separations- und Build-Inspektionstests": [
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795186166347
+      }
+    ],
+    "16. Dokumentation": [
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795186342960
+      }
+    ],
+    "17. Gesamtverifikation": [
+      {
+        "executionId": "2a2aea41-0e0a-46b3-baac-ff863fda4a7d",
+        "chatSessionId": "sess_3a195f4e-7083-431c-8857-208a499bba9c",
+        "timestamp": 1795186698624
+      }
+    ]
+  }
+}

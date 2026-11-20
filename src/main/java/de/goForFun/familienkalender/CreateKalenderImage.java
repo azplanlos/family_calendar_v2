@@ -9,17 +9,28 @@ import de.goForFun.familienkalender.model.Event;
 import de.goForFun.familienkalender.model.EventSource;
 import de.goForFun.familienkalender.model.RenderData;
 import de.goForFun.familienkalender.model.WeatherDay;
+import de.goForFun.familienkalender.outlook.GraphCalendarSource;
+import de.goForFun.familienkalender.outlook.GraphConfig;
+import de.goForFun.familienkalender.outlook.GraphSource;
+import de.goForFun.familienkalender.outlook.IcsCalendarFetcher;
+import de.goForFun.familienkalender.outlook.JdkGraphHttp;
+import de.goForFun.familienkalender.outlook.OutlookCalendarLoader;
+import de.goForFun.familienkalender.outlook.OutlookLog;
+import de.goForFun.familienkalender.outlook.OutlookSourceSelector;
+import de.goForFun.familienkalender.outlook.SsmRefreshTokenStore;
 import net.fortuna.ical4j.data.ParserException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.ssm.SsmClient;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
+import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -70,8 +81,23 @@ public class CreateKalenderImage implements RequestHandler<ScheduledEvent, Void>
             // Original-Outlook-Feed (unanonymisiert) zusätzlich rendern und dem Participant zuordnen
             URI outlookFeedUri = parseHttpUri(System.getenv("ANON_SOURCE_FEED"));
             String outlookParticipant = System.getenv("ANON_PARTICIPANT");
-            EventRepository eventRepository = new EventRepository(URI.create(CALENDAR_FEED), schoolFeedUri, vacationFeedUri,
-                    outlookFeedUri, outlookParticipant, today, holidayProvider);
+            EventRepository eventRepository;
+            GraphConfig graphConfig = GraphConfig.fromEnv();
+            if (graphConfig.state() == GraphConfig.State.CONFIGURED) {
+                OutlookLog outlookLog = lambdaOutlookLog(logger);
+                OutlookCalendarLoader outlookLoader = new OutlookSourceSelector(graphConfig,
+                        () -> newGraphSource(graphConfig, outlookLog), outlookFeedUri,
+                        new IcsCalendarFetcher(), outlookLog);
+                eventRepository = new EventRepository(URI.create(CALENDAR_FEED), schoolFeedUri, vacationFeedUri,
+                        outlookLoader, outlookParticipant, today, holidayProvider);
+            } else {
+                if (graphConfig.state() == GraphConfig.State.PARTIAL) {
+                    logger.log("WARN: Graph-Konfiguration unvollständig, Variable fehlt: "
+                            + graphConfig.missingVariable() + "; Graph wird nicht verwendet");
+                }
+                eventRepository = new EventRepository(URI.create(CALENDAR_FEED), schoolFeedUri, vacationFeedUri,
+                        outlookFeedUri, outlookParticipant, today, holidayProvider);
+            }
             List<Event> todayEvents = eventRepository.getEventsForDay(today);
             List<Event> tomorrowEvents = eventRepository.getEventsForDay(today.plusDays(1));
 
@@ -155,6 +181,30 @@ public class CreateKalenderImage implements RequestHandler<ScheduledEvent, Void>
             throw new RuntimeException(e);
         }
         return null;
+    }
+
+    private static OutlookLog lambdaOutlookLog(LambdaLogger logger) {
+        return new OutlookLog() {
+            @Override
+            public void warn(String message) {
+                logger.log("WARN: " + message);
+            }
+
+            @Override
+            public void error(String message) {
+                logger.log("ERROR: " + message);
+            }
+        };
+    }
+
+    /** Erzeugt je Abruf eine Graph-Quelle; der SsmClient wird nach dem Abruf geschlossen. */
+    private static GraphCalendarSource newGraphSource(GraphConfig config, OutlookLog log) {
+        return window -> {
+            try (SsmClient ssm = SsmClient.builder().region(Region.of(AWS_REGION)).build()) {
+                return new GraphSource(config, new SsmRefreshTokenStore(ssm), new JdkGraphHttp(),
+                        Clock.systemUTC(), AppTimeZone.get(), log).fetch(window);
+            }
+        };
     }
 
     /**

@@ -25,10 +25,13 @@ package:
 
 custom:
   updateIntervalMinutes: 360
+  graphRefreshTokenParam: ${param:graphRefreshTokenParam, ''}
 
 functions:
   FamilyWall-Kalender:
     handler: de.goForFun.familienkalender.CreateKalenderImage
+    role: FamilyWallKalenderRole
+    timeout: 60
     events:
       - eventBridge:
           schedule: rate(${self:custom.updateIntervalMinutes} minutes)
@@ -50,6 +53,8 @@ functions:
       OPENWEATHER_LON: ${param:openweatherLon}
       ANON_SOURCE_FEED: ${param:anonSourceFeed, ''}
       ANON_PARTICIPANT: ${param:anonParticipant, ''}
+      GRAPH_CLIENT_ID: ${param:graphClientId, ''}
+      GRAPH_REFRESH_TOKEN_PARAM: ${self:custom.graphRefreshTokenParam}
 
   ServeCalendarImage:
     handler: de.goForFun.familienkalender.ServeCalendarImage
@@ -65,6 +70,7 @@ functions:
 
   ServeAnonymizedFeed:
     handler: de.goForFun.familienkalender.anonfeed.ServeAnonymizedFeed
+    role: ServeAnonymizedFeedRole
     timeout: 30
     memorySize: 512
     url:
@@ -76,3 +82,110 @@ functions:
       ANON_PARTICIPANT: ${param:anonParticipant, ''}
       ANON_PLACEHOLDER: ${param:anonPlaceholder, 'Privat'}
       ANON_API_SECRET: ${param:anonApiSecret, ''}
+      GRAPH_CLIENT_ID: ${param:graphClientId, ''}
+      GRAPH_REFRESH_TOKEN_PARAM: ${self:custom.graphRefreshTokenParam}
+      GRAPH_HORIZON_DAYS: ${param:graphHorizonDays, 365}
+
+resources:
+  Conditions:
+    GraphConfigured:
+      Fn::Not:
+        - Fn::Equals: ['${self:custom.graphRefreshTokenParam}', '']
+  Resources:
+    ServeAnonymizedFeedRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: lambda.amazonaws.com
+              Action: sts:AssumeRole
+        Policies:
+          - PolicyName: logs
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - logs:CreateLogStream
+                    - logs:PutLogEvents
+                  Resource:
+                    Fn::Sub: 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${self:service}-${sls:stage}-*:*'
+          - Fn::If:
+              - GraphConfigured
+              - PolicyName: graph-refresh-token
+                PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                    - Effect: Allow
+                      Action:
+                        - ssm:GetParameter
+                        - ssm:PutParameter
+                      Resource:
+                        Fn::Sub: 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${self:custom.graphRefreshTokenParam}'
+                    - Effect: Allow
+                      Action:
+                        - kms:Decrypt
+                        - kms:Encrypt
+                      Resource:
+                        Fn::Sub: 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/*'
+                      Condition:
+                        StringEquals:
+                          kms:ViaService:
+                            Fn::Sub: 'ssm.${AWS::Region}.amazonaws.com'
+              - Ref: AWS::NoValue
+    FamilyWallKalenderRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: lambda.amazonaws.com
+              Action: sts:AssumeRole
+        Policies:
+          - PolicyName: logs
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - logs:CreateLogStream
+                    - logs:PutLogEvents
+                  Resource:
+                    Fn::Sub: 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${self:service}-${sls:stage}-*:*'
+          - PolicyName: s3
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - 's3:*'
+                  Resource:
+                    - 'arn:aws:s3:::familienkalender/*'
+          - Fn::If:
+              - GraphConfigured
+              - PolicyName: graph-refresh-token
+                PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                    - Effect: Allow
+                      Action:
+                        - ssm:GetParameter
+                        - ssm:PutParameter
+                      Resource:
+                        Fn::Sub: 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${self:custom.graphRefreshTokenParam}'
+                    - Effect: Allow
+                      Action:
+                        - kms:Decrypt
+                        - kms:Encrypt
+                      Resource:
+                        Fn::Sub: 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/*'
+                      Condition:
+                        StringEquals:
+                          kms:ViaService:
+                            Fn::Sub: 'ssm.${AWS::Region}.amazonaws.com'
+              - Ref: AWS::NoValue
