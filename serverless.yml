@@ -39,8 +39,7 @@ functions:
       THUMBNAIL_SIZE: 100
       TIMEZONE: ${param:timezone, 'Europe/Berlin'}
       TZ: ${param:timezone, 'Europe/Berlin'}
-      FONTCONFIG_CACHE: /tmp/.cache/fontconfig
-      FONTCONFIG_PATH: /tmp/fontconfig
+      XDG_CACHE_HOME: /tmp/.cache
       CALENDAR_FEED: ${param:calendarFeed}
       CUSTODY_CALENDAR_FEED: ${param:custodyCalendarFeed, ''}
       CUSTODY_MALE_MATCH: ${param:custodyMaleMatch, ''}
@@ -63,8 +62,7 @@ functions:
     url:
       authorizer: none
     environment:
-      FONTCONFIG_CACHE: /tmp/.cache/fontconfig
-      FONTCONFIG_PATH: /tmp/fontconfig
+      XDG_CACHE_HOME: /tmp/.cache
       API_SECRET: ${param:apiSecret}
       UPDATE_INTERVAL_MINUTES: ${self:custom.updateIntervalMinutes}
 
